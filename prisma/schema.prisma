@@ -1,0 +1,213 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator pothos {
+  provider = "prisma-pothos-types"
+}
+
+model Product {
+  id             Int               @id @default(autoincrement())
+  name           String
+  description    String
+  price          Float
+  imageUrl       String[]
+  stockQuantity  Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  categoryId     Int?
+  category       Category?         @relation(fields: [categoryId], references: [id])
+  orderItems     OrderItem[]
+  variants       ProductVariant[]
+  collections    Collection[]      @relation("CollectionProducts")
+  tags           Tag[]             @relation("ProductTags")
+  reviews        Review[]
+  averageRating  Float?
+  salesCount     Int               @default(0)
+  revenue        Float             @default(0)
+  conversionRate Float?
+  analytics      ProductAnalytics? // Add this relation field
+}
+
+model ProductVariant {
+  id            Int     @id @default(autoincrement())
+  sku           String  @unique
+  size          String
+  color         String
+  price         Float
+  stockQuantity Int     @default(0)
+  productId     Int
+  product       Product @relation(fields: [productId], references: [id])
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Collection {
+  id          Int              @id @default(autoincrement())
+  title       String
+  description String?
+  imageUrl    String?
+  type        CollectionType
+  rules       CollectionRule[]
+  products    Product[]        @relation("CollectionProducts")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model CollectionRule {
+  id           Int        @id @default(autoincrement())
+  collectionId Int
+  key          String // Example: "price", "category", etc.
+  value        String // Example: "10", "Electronics", etc.
+  collection   Collection @relation(fields: [collectionId], references: [id])
+}
+
+model Order {
+  id                  Int         @id @default(autoincrement())
+  status              OrderStatus @default(PENDING)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  customerId          Int?
+  shippingAddressId   Int?
+  billingAddressId    Int?
+  total               Float       @default(0)
+  tags                Tag[]       @relation("OrderTags")
+  notes               String?
+  discount            Float?      @default(0)
+  shippingFees        Float?      @default(0)
+  otherFees           Float?      @default(0)
+  taxRate             Float?      @default(0)
+  collectPaymentLater Boolean?    @default(false)
+  customer            Customer?   @relation(fields: [customerId], references: [id])
+  shippingAddress     Address?    @relation("OrderShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddress      Address?    @relation("OrderBillingAddress", fields: [billingAddressId], references: [id])
+  orderItems          OrderItem[]
+  coupon              Coupon?     @relation(fields: [couponId], references: [id])
+  couponId            Int?
+  profitMargin        Float?
+
+  @@map("order")
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  quantity  Int
+  price     Float   @default(0)
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("order_item")
+}
+
+model Customer {
+  id              Int      @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  email           String   @unique
+  phoneNumber     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  orders          Order[]
+  notes           String?
+  tags            Tag[]    @relation("CustomerTags")
+  address         Address? @relation("CustomerAddress")
+  reviews         Review[]
+  lifetimeValue   Float?
+  acquisitionCost Float?
+}
+
+model Address {
+  id             Int       @id @default(autoincrement())
+  address        String?
+  landmark       String?
+  city           String?
+  state          String?
+  pincode        String?
+  phone          String?
+  company        String?
+  customer       Customer? @relation("CustomerAddress", fields: [customerId], references: [id])
+  customerId     Int?      @unique
+  ordersShipping Order[]   @relation("OrderShippingAddress")
+  ordersBilling  Order[]   @relation("OrderBillingAddress")
+}
+
+model Tag {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  products  Product[]  @relation("ProductTags")
+  customers Customer[] @relation("CustomerTags")
+  orders    Order[]    @relation("OrderTags")
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  comment    String?
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Coupon {
+  id                Int          @id @default(autoincrement())
+  code              String       @unique
+  discountType      DiscountType
+  discountValue     Float
+  minPurchaseAmount Float?
+  expirationDate    DateTime?
+  maxUses           Int?
+  currentUses       Int          @default(0)
+  isActive          Boolean      @default(true)
+  orders            Order[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  usageLimit        Int?
+  usageCount        Int          @default(0)
+}
+
+model ProductAnalytics {
+  id             Int     @id @default(autoincrement())
+  productId      Int     @unique
+  product        Product @relation(fields: [productId], references: [id])
+  viewCount      Int     @default(0)
+  addToCartCount Int     @default(0)
+  purchaseCount  Int     @default(0)
+  conversionRate Float?
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+enum CollectionType {
+  MANUAL
+  AUTOMATED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
