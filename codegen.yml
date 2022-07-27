@@ -1,0 +1,13 @@
+overwrite: true
+schema: "./pothos/schema.graphql"
+generates:
+  generated/index.tsx:
+    documents: ["./pages/**/*.graphql", "./src/**/*.graphql"]
+    plugins:
+      - "typescript"
+      - "typescript-operations"
+      - "typescript-react-apollo"
+    config:
+      withHooks: true
+      withComponent: false
+      withHOC: false
