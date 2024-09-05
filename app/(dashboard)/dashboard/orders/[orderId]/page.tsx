@@ -620,6 +620,7 @@ import {
     FileText,
     MessageSquare,
     Paperclip,
+    Loader2Icon,
 } from "lucide-react"
 import { useQuery } from "@apollo/client"
 import { GET_ORDER_QUERY } from "@/ApolloClient/orderQueries"
@@ -667,11 +668,11 @@ const orderTimeline = [
 ]
 
 export default function EnhancedOrderDetailsPage() {
-    // const [order, setOrder] = useState(orderData)
-    const { loading, error, data: orderData } = useQuery(GET_ORDER_QUERY, {
-        variables: { id: 16 },
-    });
-    const { order } = orderData ?? SampleOrderData;
+    const [order, setOrder] = useState(SampleOrderData)
+    // const { loading, error, data: orderData } = useQuery(GET_ORDER_QUERY, {
+    //     variables: { id: 16 },
+    // });
+    // const { order } = orderData ?? SampleOrderData;
 
     const [isEditing, setIsEditing] = useState(false)
     const [editedOrder, setEditedOrder] = useState(order)
@@ -781,8 +782,8 @@ export default function EnhancedOrderDetailsPage() {
         }
     }
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error.message}</p>;
+    // if (loading) return <Loader2Icon/>
+    // if (error) return <p>Error: {error.message}</p>;
 
     return (
         <div className="container mx-auto py-10">

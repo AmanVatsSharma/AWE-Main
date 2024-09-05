@@ -586,7 +586,7 @@ export default function Component() {
                                                 </tbody>
                                             </table>
                                         ) : (
-                                            <p>This customer hasn't placed any orders yet.</p>
+                                            <p>This customer hasn&apos;t placed any orders yet.</p>
                                         )}
                                     </CardContent>
                                 </Card>
