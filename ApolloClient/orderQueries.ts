@@ -101,6 +101,53 @@ export const GET_ORDER_DETAILS = gql`
   }
 `;
 
+export const GET_ORDER_QUERY = gql`
+  query GetOrder($id: Int!) {
+    order(id: $id) {
+      id
+      customer {
+        firstName
+        lastName
+        email
+        phoneNumber
+        notes
+        tags {
+          name
+        }
+        lifetimeValue
+        acquisitionCost
+      }
+      createdAt
+      status
+      orderItems {
+        id
+        product {
+          name
+          variants {
+            sku
+          }
+        }
+        quantity
+        price
+      }
+      total
+      shippingFees
+      discount
+      otherFees
+      shippingAddress {
+        address
+        city
+        state
+        pincode
+        phone
+        company
+      }
+      tags {
+        name
+      }
+    }
+  }
+`;
 
 
 

@@ -12,25 +12,25 @@ const handleError = (error: any) => {
 };
 
 const validatePagination = (page: number, perPage: number) => {
-    if (page < 1 || perPage < 1) {
-        throw new GraphQLError("Invalid pagination parameters", {
-            extensions: { code: "BAD_USER_INPUT" },
-        });
-    }
+  if (page < 1 || perPage < 1) {
+    throw new GraphQLError("Invalid pagination parameters", {
+      extensions: { code: "BAD_USER_INPUT" },
+    });
+  }
 };
 
 const validateRating = (rating: number) => {
-    if (rating < 1 || rating > 5) {
-        throw new GraphQLError("Rating must be between 1 and 5", {
-            extensions: { code: "BAD_USER_INPUT" },
-        });
-    }
+  if (rating < 1 || rating > 5) {
+    throw new GraphQLError("Rating must be between 1 and 5", {
+      extensions: { code: "BAD_USER_INPUT" },
+    });
+  }
 };
 
 
 
 const schema = createSchema({
-    typeDefs: `
+  typeDefs: `
 scalar DateTime
 
 type Query {
@@ -624,1173 +624,1174 @@ enum DiscountType {
     AUTOMATED
   }
   `,
-    resolvers: {
-        Query: {
-            // Existing queries with pagination
-            products: async (_parent, { category, search, page = 1, perPage = 10 }) => {
-                try {
-                    validatePagination(page, perPage);
-                    const where = {
-                        category: category ? { name: category } : undefined,
-                        OR: search
-                            ? [
-                                { name: { contains: search, mode: "insensitive" } },
-                                { description: { contains: search, mode: "insensitive" } },
-                            ]
-                            : undefined,
-                    };
-                    const totalCount = await prisma.product.count({ where });
-                    const products = await prisma.product.findMany({
-                        where,
-                        skip: (page - 1) * perPage,
-                        take: perPage,
-                        include: {
-                            category: true,
-                            variants: true,
-                            collections: true,
-                            tags: true,
-                        },
-                    });
-                    return {
-                        edges: products.map((product) => ({
-                            node: product,
-                            cursor: Buffer.from(product.id.toString()).toString("base64"),
-                        })),
-                        pageInfo: {
-                            hasNextPage: (page - 1) * perPage + products.length < totalCount,
-                            hasPreviousPage: page > 1,
-                            startCursor: products.length > 0 ? Buffer.from(products[0].id.toString()).toString("base64") : null,
-                            endCursor: products.length > 0 ? Buffer.from(products[products.length - 1].id.toString()).toString("base64") : null,
-                        },
-                        totalCount,
-                    };
-                } catch (error) {
-                    return handleError(error);
-                }
+  resolvers: {
+    Query: {
+      // Existing queries with pagination
+      products: async (_parent, { category, search, page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const where = {
+            category: category ? { name: category } : undefined,
+            OR: search
+              ? [
+                { name: { contains: search, mode: "insensitive" } },
+                { description: { contains: search, mode: "insensitive" } },
+              ]
+              : undefined,
+          };
+          const totalCount = await prisma.product.count({ where });
+          const products = await prisma.product.findMany({
+            where,
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              category: true,
+              variants: true,
+              collections: true,
+              tags: true,
             },
+          });
+          return {
+            edges: products.map((product) => ({
+              node: product,
+              cursor: Buffer.from(product.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + products.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: products.length > 0 ? Buffer.from(products[0].id.toString()).toString("base64") : null,
+              endCursor: products.length > 0 ? Buffer.from(products[products.length - 1].id.toString()).toString("base64") : null,
+            },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
 
-            product: async (_, { id }) => {
-                try {
-                  const product = await prisma.product.findUnique({
-                    where: { id },
-                    include: {
-                      category: true,
-                      variants: true,
-                      collections: true,
-                      tags: true,
-                    },
-                  });
-          
-                  if (!product) {
-                    throw new GraphQLError("Product not found", {
-                      extensions: { code: "NOT_FOUND" },
-                    });
-                  }
-          
-                  return product;
-                } catch (error) {
-                  throw new GraphQLError("Failed to fetch product", {
-                    extensions: { code: "DATABASE_ERROR", error },
-                  });
-                }
-            },          
+      product: async (_, { id }) => {
+        try {
+          const product = await prisma.product.findUnique({
+            where: { id },
+            include: {
+              category: true,
+              variants: true,
+              collections: true,
+              tags: true,
+            },
+          });
 
-            // New queries
-            categories: async () => {
-              return prisma.category.findMany();
-            },
-            
-            category: async (_, { id }) => {
-              return prisma.category.findUnique({ where: { id } });
-            },
-            
-            collections: async () => {
-              return prisma.collection.findMany();
-            },
-            
-            collection: async (_, { id }) => {
-              return prisma.collection.findUnique({ where: { id } });
-            },
+          if (!product) {
+            throw new GraphQLError("Product not found", {
+              extensions: { code: "NOT_FOUND" },
+            });
+          }
 
-            order: async (_, { id }) => {
-              return prisma.order.findUnique({
-                where: { id },
-                include: {
-                  customer: true,
-                  orderItems: { include: { product: true } },
-                  coupon: true,
-                },
-              });
-            },
-            
-            orders: async (_, { page = 1, perPage = 10 }) => {
-              try {
-                validatePagination(page, perPage);
-                const totalCount = await prisma.order.count();
-                const orders = await prisma.order.findMany({
-                  skip: (page - 1) * perPage,
-                  take: perPage,
-                  include: {
-                    customer: true,
-                    orderItems: { include: { product: true } },
-                    coupon: true,
-                  },
-                  orderBy: { createdAt: 'desc' },
-                });
-                return {
-                  edges: orders.map((order) => ({
-                    node: order,
-                    cursor: Buffer.from(order.id.toString()).toString("base64"),
-                  })),
-                  pageInfo: {
-                    hasNextPage: (page - 1) * perPage + orders.length < totalCount,
-                    hasPreviousPage: page > 1,
-                    startCursor: orders.length > 0 ? Buffer.from(orders[0].id.toString()).toString("base64") : null,
-                    endCursor: orders.length > 0 ? Buffer.from(orders[orders.length - 1].id.toString()).toString("base64") : null,
-                  },
-                  totalCount,
-                };
-              } catch (error) {
-                return handleError(error);
-              }
-            },
-                        
-            customer: async (_, { id }) => {
-              return prisma.customer.findUnique({
-                where: { id },
-                include: {
-                  orders: true,
-                  address: true,
-                },
-              });
-            },
-            
-            customers: async (_, { page = 1, perPage = 10 }) => {
-              try {
-                validatePagination(page, perPage);
-                const totalCount = await prisma.customer.count();
-                const customers = await prisma.customer.findMany({
-                  skip: (page - 1) * perPage,
-                  take: perPage,
-                  include: {
-                    orders: true,
-                    address: true,
-                  },
-                });
-                return {
-                  edges: customers.map((customer) => ({
-                    node: customer,
-                    cursor: Buffer.from(customer.id.toString()).toString("base64"),
-                  })),
-                  pageInfo: {
-                    hasNextPage: (page - 1) * perPage + customers.length < totalCount,
-                    hasPreviousPage: page > 1,
-                    startCursor: customers.length > 0 ? Buffer.from(customers[0].id.toString()).toString("base64") : null,
-                    endCursor: customers.length > 0 ? Buffer.from(customers[customers.length - 1].id.toString()).toString("base64") : null,
-                  },
-                  totalCount,
-                };
-              } catch (error) {
-                return handleError(error);
-              }
-            },
-                        
-            searchProducts: async (_, { searchTerm, page = 1, perPage = 10 }) => {
-              try {
-                validatePagination(page, perPage);
-                const where = {
-                  OR: [
-                    { name: { contains: searchTerm, mode: "insensitive" } },
-                    { description: { contains: searchTerm, mode: "insensitive" } },
-                  ],
-                };
-                const totalCount = await prisma.product.count({ where });
-                const products = await prisma.product.findMany({
-                  where,
-                  skip: (page - 1) * perPage,
-                  take: perPage,
-                  include: {
-                    category: true,
-                    variants: true,
-                    collections: true,
-                    tags: true,
-                  },
-                });
-                return {
-                  edges: products.map((product) => ({
-                    node: product,
-                    cursor: Buffer.from(product.id.toString()).toString("base64"),
-                  })),
-                  pageInfo: {
-                    hasNextPage: (page - 1) * perPage + products.length < totalCount,
-                    hasPreviousPage: page > 1,
-                    startCursor: products.length > 0 ? Buffer.from(products[0].id.toString()).toString("base64") : null,
-                    endCursor: products.length > 0 ? Buffer.from(products[products.length - 1].id.toString()).toString("base64") : null,
-                  },
-                  totalCount,
-                };
-              } catch (error) {
-                return handleError(error);
-              }
-            },
-                        
-            searchCustomers: async (_, { searchTerm, page = 1, perPage = 10 }) => {
-              try {
-                validatePagination(page, perPage);
-                const where = {
-                  OR: [
-                    { firstName: { contains: searchTerm, mode: "insensitive" } },
-                    { lastName: { contains: searchTerm, mode: "insensitive" } },
-                    { email: { contains: searchTerm, mode: "insensitive" } },
-                  ],
-                };
-                const totalCount = await prisma.customer.count({ where });
-                const customers = await prisma.customer.findMany({
-                  where,
-                  skip: (page - 1) * perPage,
-                  take: perPage,
-                  include: {
-                    orders: true,
-                    reviews: true,
-                    address: true,
-                  },
-                });
-                return {
-                  edges: customers.map((customer) => ({
-                    node: customer,
-                    cursor: Buffer.from(customer.id.toString()).toString("base64"),
-                  })),
-                  pageInfo: {
-                    hasNextPage: (page - 1) * perPage + customers.length < totalCount,
-                    hasPreviousPage: page > 1,
-                    startCursor: customers.length > 0 ? Buffer.from(customers[0].id.toString()).toString("base64") : null,
-                    endCursor: customers.length > 0 ? Buffer.from(customers[customers.length - 1].id.toString()).toString("base64") : null,
-                  },
-                  totalCount,
-                };
-              } catch (error) {
-                return handleError(error);
-              }
-            },            
-            
-            coupon: async (_parent, { id }) => {
-              return prisma.coupon.findUnique({ where: { id } });
-            },
-                
-            featuredProducts: async (_parent, { limit = 10 }) => {
-                try {
-                    return await prisma.product.findMany({
-                        where: { tags: { some: { name: "featured" } } },
-                        take: limit,
-                        include: {
-                            category: true,
-                            variants: true,
-                            collections: true,
-                            tags: true,
-                        },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
-            },
+          return product;
+        } catch (error) {
+          throw new GraphQLError("Failed to fetch product", {
+            extensions: { code: "DATABASE_ERROR", error },
+          });
+        }
+      },
 
-            customerOrders: async (_parent, { customerId, page = 1, perPage = 10 }) => {
-              const skip = (page - 1) * perPage;
-              const [orders, totalCount] = await Promise.all([
-                prisma.order.findMany({
-                  where: { customerId },
-                  skip,
-                  take: perPage,
-                  include: { orderItems: { include: { product: true } }, coupon: true },
-                  orderBy: { createdAt: 'desc' },
-                }),
-                prisma.order.count({ where: { customerId } }),
-              ]);
-        
-              return {
-                edges: orders.map(order => ({
-                  node: order,
-                  cursor: Buffer.from(order.id.toString()).toString('base64'),
-                })),
-                pageInfo: {
-                  hasNextPage: skip + orders.length < totalCount,
-                  hasPreviousPage: page > 1,
-                  startCursor: orders.length > 0 ? Buffer.from(orders[0].id.toString()).toString('base64') : null,
-                  endCursor: orders.length > 0 ? Buffer.from(orders[orders.length - 1].id.toString()).toString('base64') : null,
-                },
-                totalCount,
-              };
-            },
+      // New queries
+      categories: async () => {
+        return prisma.category.findMany();
+      },
 
-            productsByCollection: async (_parent, { collectionId, page = 1, perPage = 20 }) => {
-                try {
-                    validatePagination(page, perPage);
-                    const where = { collections: { some: { id: collectionId } } };
-                    const totalCount = await prisma.product.count({ where });
-                    const products = await prisma.product.findMany({
-                        where,
-                        skip: (page - 1) * perPage,
-                        take: perPage,
-                        include: {
-                            category: true,
-                            variants: true,
-                            collections: true,
-                            tags: true,
-                        },
-                    });
-                    return {
-                        edges: products.map((product) => ({
-                            node: product,
-                            cursor: Buffer.from(product.id.toString()).toString("base64"),
-                        })),
-                        pageInfo: {
-                            hasNextPage: (page - 1) * perPage + products.length < totalCount,
-                            hasPreviousPage: page > 1,
-                            startCursor: products.length > 0 ? Buffer.from(products[0].id.toString()).toString("base64") : null,
-                            endCursor: products.length > 0 ? Buffer.from(products[products.length - 1].id.toString()).toString("base64") : null,
-                        },
-                        totalCount,
-                    };
-                } catch (error) {
-                    return handleError(error);
-                }
-            },
+      category: async (_, { id }) => {
+        return prisma.category.findUnique({ where: { id } });
+      },
 
-            reviews: async (_parent, { productId, page = 1, perPage = 10 }) => {
-                try {
-                    validatePagination(page, perPage);
-                    const where = { productId };
-                    const totalCount = await prisma.review.count({ where });
-                    const reviews = await prisma.review.findMany({
-                        where,
-                        skip: (page - 1) * perPage,
-                        take: perPage,
-                        include: {
-                            product: true,
-                            customer: true,
-                        },
-                    });
-                    return {
-                        edges: reviews.map((review) => ({
-                            node: review,
-                            cursor: Buffer.from(review.id.toString()).toString("base64"),
-                        })),
-                        pageInfo: {
-                            hasNextPage: (page - 1) * perPage + reviews.length < totalCount,
-                            hasPreviousPage: page > 1,
-                            startCursor: reviews.length > 0 ? Buffer.from(reviews[0].id.toString()).toString("base64") : null,
-                            endCursor: reviews.length > 0 ? Buffer.from(reviews[reviews.length - 1].id.toString()).toString("base64") : null,
-                        },
-                        totalCount,
-                    };
-                } catch (error) {
-                    return handleError(error);
-                }
-            },
+      collections: async () => {
+        return prisma.collection.findMany();
+      },
 
-            coupons: async (_parent, { page = 1, perPage = 10 }) => {
-                try {
-                    validatePagination(page, perPage);
-                    const totalCount = await prisma.coupon.count();
-                    const coupons = await prisma.coupon.findMany({
-                        skip: (page - 1) * perPage,
-                        take: perPage,
-                    });
-                    return {
-                        edges: coupons.map((coupon) => ({
-                            node: coupon,
-                            cursor: Buffer.from(coupon.id.toString()).toString("base64"),
-                        })),
-                        pageInfo: {
-                            hasNextPage: (page - 1) * perPage + coupons.length < totalCount,
-                            hasPreviousPage: page > 1,
-                            startCursor: coupons.length > 0 ? Buffer.from(coupons[0].id.toString()).toString("base64") : null,
-                            endCursor: coupons.length > 0 ? Buffer.from(coupons[coupons.length - 1].id.toString()).toString("base64") : null,
-                        },
-                        totalCount,
-                    };
-                } catch (error) {
-                    return handleError(error);
-                }
-            },
+      collection: async (_, { id }) => {
+        return prisma.collection.findUnique({ where: { id } });
+      },
 
-            salesReport: async (_parent, { startDate, endDate }) => {
-                try {
-                    const orders = await prisma.order.findMany({
-                        where: {
-                            createdAt: {
-                                gte: startDate,
-                                lte: endDate,
-                            },
-                            status: "DELIVERED",
-                        },
-                        include: {
-                            orderItems: {
-                                include: {
-                                    product: true,
-                                },
-                            },
-                        },
-                    });
-
-                    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
-                    const totalOrders = orders.length;
-                    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
-
-                    const productSales = orders.flatMap((order) =>
-                        order.orderItems.map((item) => ({
-                            productId: item.productId,
-                            quantity: item.quantity,
-                            revenue: item.price * item.quantity,
-                        }))
-                    );
-
-                    const topSellingProducts = Object.values(
-                        productSales.reduce((acc, { productId, quantity, revenue }) => {
-                            if (!acc[productId]) {
-                                acc[productId] = { productId, totalQuantitySold: 0, totalRevenue: 0 };
-                            }
-                            acc[productId].totalQuantitySold += quantity;
-                            acc[productId].totalRevenue += revenue;
-                            return acc;
-                        }, {})
-                    )
-                        .sort((a, b) => b.totalRevenue - a.totalRevenue)
-                        .slice(0, 5);
-
-                    const topSellingProductsWithDetails = await Promise.all(
-                        topSellingProducts.map(async ({ productId, totalQuantitySold, totalRevenue }) => ({
-                            product: await prisma.product.findUnique({ where: { id: productId } }),
-                            totalQuantitySold,
-                            totalRevenue,
-                        }))
-                    );
-
-                    return {
-                        totalSales,
-                        totalOrders,
-                        averageOrderValue,
-                        topSellingProducts: topSellingProductsWithDetails,
-                    };
-                } catch (error) {
-                    return handleError(error);
-                }
-            },
-
-            popularProducts: async (_parent, { limit = 10 }) => {
-                try {
-                    const popularProducts = await prisma.orderItem.groupBy({
-                        by: ["productId"],
-                        _sum: {
-                            quantity: true,
-                        },
-                        orderBy: {
-                            _sum: {
-                                quantity: "desc",
-                            },
-                        },
-                        take: limit,
-                    });
-
-                    return Promise.all(
-                        popularProducts.map(async (item) =>
-                            prisma.product.findUnique({
-                                where: { id: item.productId },
-                                include: {
-                                    category: true,
-                                    variants: true,
-                                    collections: true,
-                                    tags: true,
-                                },
-                            })
-                        )
-                    );
-                } catch (error) {
-                    return handleError(error);
-                }
-            },
-
-            productAnalytics: async (_, { id }) => {
-              const product = await prisma.product.findUnique({ where: { id } });
-              const analytics = await prisma.productAnalytics.findUnique({ where: { productId: id } });
-              return {
-                product,
-                ...analytics,
-                conversionRate: analytics.viewCount > 0 ? analytics.purchaseCount / analytics.viewCount : 0,
-              };
-            },
-        
-            categoryAnalytics: async (_, { id }) => {
-              const category = await prisma.category.findUnique({ where: { id } });
-              const products = await prisma.product.findMany({ where: { categoryId: id } });
-              const sales = await prisma.order.findMany({
-                where: { orderItems: { some: { product: { categoryId: id } } } },
-                include: { orderItems: true },
-              });
-        
-              const totalSales = sales.reduce((sum, order) => 
-                sum + order.orderItems.reduce((itemSum, item) => itemSum + item.price * item.quantity, 0), 0);
-        
-              const topProducts = products.sort((a, b) => b.salesCount - a.salesCount).slice(0, 5);
-        
-              return {
-                category,
-                productCount: products.length,
-                totalSales,
-                topProducts,
-              };
-            },
-        
-            salesAnalytics: async (_, { startDate, endDate }) => {
-              const orders = await prisma.order.findMany({
-                where: { createdAt: { gte: startDate, lte: endDate } },
-                include: { orderItems: { include: { product: true } } },
-              });
-        
-              const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-              const averageOrderValue = totalRevenue / orders.length;
-        
-              const productSales = {};
-              orders.forEach(order => {
-                order.orderItems.forEach(item => {
-                  if (!productSales[item.productId]) {
-                    productSales[item.productId] = { product: item.product, salesCount: 0, revenue: 0 };
-                  }
-                  productSales[item.productId].salesCount += item.quantity;
-                  productSales[item.productId].revenue += item.price * item.quantity;
-                });
-              });
-        
-              const topSellingProducts = Object.values(productSales)
-                .sort((a, b) => b.salesCount - a.salesCount)
-                .slice(0, 10)
-                .map(({ product, salesCount, revenue }) => ({
-                  product,
-                  salesCount,
-                  revenue,
-                  conversionRate: calculateConversionRate(product.id),
-                }));
-        
-              const salesByCategory = await calculateSalesByCategory(orders);
-              const salesByDate = calculateSalesByDate(orders);
-        
-              return {
-                totalRevenue,
-                orderCount: orders.length,
-                averageOrderValue,
-                topSellingProducts,
-                salesByCategory,
-                salesByDate,
-              };
-            },
-        
-            customerAnalytics: async () => {
-              const customers = await prisma.customer.findMany({
-                include: { orders: true },
-              });
-        
-              const totalCustomers = customers.length;
-              const newCustomers = customers.filter(c => c.orders.length === 1).length;
-              const repeatCustomers = totalCustomers - newCustomers;
-        
-              const averageLifetimeValue = customers.reduce((sum, customer) => 
-                sum + customer.orders.reduce((orderSum, order) => orderSum + order.total, 0), 0) / totalCustomers;
-        
-              const topCustomers = customers
-                .sort((a, b) => calculateLifetimeValue(b) - calculateLifetimeValue(a))
-                .slice(0, 10);
-        
-              const customerRetentionRate = repeatCustomers / totalCustomers;
-        
-              return {
-                totalCustomers,
-                newCustomers,
-                repeatCustomers,
-                averageLifetimeValue,
-                topCustomers,
-                customerRetentionRate,
-              };
-            },
-        
-            inventoryAnalytics: async () => {
-              const products = await prisma.product.findMany();
-        
-              const lowStockThreshold = 10; // Example threshold
-              const overStockThreshold = 100; // Example threshold
-        
-              const lowStockProducts = products.filter(p => p.stockQuantity > 0 && p.stockQuantity <= lowStockThreshold);
-              const outOfStockProducts = products.filter(p => p.stockQuantity === 0);
-              const overStockProducts = products.filter(p => p.stockQuantity > overStockThreshold);
-        
-              const inventoryTurnoverRate = await calculateInventoryTurnoverRate();
-        
-              return {
-                lowStockProducts,
-                outOfStockProducts,
-                overStockProducts,
-                inventoryTurnoverRate,
-              };
-            },
-        
-            marketingAnalytics: async (_, { startDate, endDate }) => {
-              const cartAbandonmentRate = await calculateCartAbandonmentRate(startDate, endDate);
-              const conversionRate = await calculateConversionRate(startDate, endDate);
-              const averageTimeToConversion = await calculateAverageTimeToConversion(startDate, endDate);
-              const topReferralSources = await getTopReferralSources(startDate, endDate);
-        
-              return {
-                cartAbandonmentRate,
-                conversionRate,
-                averageTimeToConversion,
-                topReferralSources,
-              };
-            },
-        
-            dashboardSummary: async () => {
-              const totalRevenue = await calculateTotalRevenue();
-              const totalOrders = await prisma.order.count();
-              const totalCustomers = await prisma.customer.count();
-              const averageOrderValue = totalRevenue / totalOrders;
-              const topSellingProducts = await getTopSellingProducts();
-              const recentOrders = await getRecentOrders();
-              const salesTrend = await getSalesTrend();
-              const customerGrowth = await getCustomerGrowth();
-        
-              return {
-                totalRevenue,
-                totalOrders,
-                totalCustomers,
-                averageOrderValue,
-                topSellingProducts,
-                recentOrders,
-                salesTrend,
-                customerGrowth,
-              };
-            },
+      order: async (_, { id }) => {
+        return prisma.order.findUnique({
+          where: { id },
+          include: {
+            customer: true,
+            orderItems: { include: { product: true } },
+            coupon: true,
           },
+        });
+      },
 
-        Mutation: {
-            // New mutations
-            createReview: async (_parent, { input }) => {
-                const { productId, customerId, rating, comment } = input;
-
-                try {
-                    validateRating(rating);
-                    return await prisma.review.create({
-                        data: {
-                            product: { connect: { id: productId } },
-                            customer: { connect: { id: customerId } },
-                            rating,
-                            comment,
-                        },
-                        include: {
-                            product: true,
-                            customer: true,
-                        },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+      orders: async (_, { page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const totalCount = await prisma.order.count();
+          const orders = await prisma.order.findMany({
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              customer: true,
+              orderItems: { include: { product: true } },
+              coupon: true,
             },
-
-            updateReview: async (_parent, { id, input }) => {
-                try {
-                    if (input.rating) {
-                        validateRating(input.rating);
-                    }
-                    return await prisma.review.update({
-                        where: { id },
-                        data: input,
-                        include: {
-                            product: true,
-                            customer: true,
-                        },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+            orderBy: { createdAt: 'desc' },
+          });
+          return {
+            edges: orders.map((order) => ({
+              node: order,
+              cursor: Buffer.from(order.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + orders.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: orders.length > 0 ? Buffer.from(orders[0].id.toString()).toString("base64") : null,
+              endCursor: orders.length > 0 ? Buffer.from(orders[orders.length - 1].id.toString()).toString("base64") : null,
             },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
 
-            deleteReview: async (_parent, { id }) => {
-                try {
-                    return await prisma.review.delete({
-                        where: { id },
-                        include: {
-                            product: true,
-                            customer: true,
-                        },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+      customer: async (_, { id }) => {
+        return prisma.customer.findUnique({
+          where: { id },
+          include: {
+            orders: true,
+            address: true,
+          },
+        });
+      },
+
+      customers: async (_, { page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const totalCount = await prisma.customer.count();
+          const customers = await prisma.customer.findMany({
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              orders: true,
+              address: true,
             },
-
-            updateInventory: async (_parent, { productId, quantity }) => {
-                try {
-                    if (quantity < 0) {
-                        throw new GraphQLError("Quantity cannot be negative", {
-                            extensions: { code: "BAD_USER_INPUT" },
-                        });
-                    }
-                    return await prisma.product.update({
-                        where: { id: productId },
-                        data: { stockQuantity: quantity },
-                        include: {
-                            category: true,
-                            variants: true,
-                            collections: true,
-                            tags: true,
-                        },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+          });
+          return {
+            edges: customers.map((customer) => ({
+              node: customer,
+              cursor: Buffer.from(customer.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + customers.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: customers.length > 0 ? Buffer.from(customers[0].id.toString()).toString("base64") : null,
+              endCursor: customers.length > 0 ? Buffer.from(customers[customers.length - 1].id.toString()).toString("base64") : null,
             },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
 
-            createCoupon: async (_parent, { input }) => {
-                try {
-                    if (input.discountValue <= 0) {
-                        throw new GraphQLError("Discount value must be greater than 0", {
-                            extensions: { code: "BAD_USER_INPUT" },
-                        });
-                    }
-                    return await prisma.coupon.create({
-                        data: {
-                            ...input,
-                            currentUses: 0,
-                            isActive: true,
-                        },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+      searchProducts: async (_, { searchTerm, page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const where = {
+            OR: [
+              { name: { contains: searchTerm, mode: "insensitive" } },
+              { description: { contains: searchTerm, mode: "insensitive" } },
+            ],
+          };
+          const totalCount = await prisma.product.count({ where });
+          const products = await prisma.product.findMany({
+            where,
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              category: true,
+              variants: true,
+              collections: true,
+              tags: true,
             },
-
-            updateCoupon: async (_parent, { id, input }) => {
-                try {
-                    if (input.discountValue && input.discountValue <= 0) {
-                        throw new GraphQLError("Discount value must be greater than 0", {
-                            extensions: { code: "BAD_USER_INPUT" },
-                        });
-                    }
-                    return await prisma.coupon.update({
-                        where: { id },
-                        data: input,
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+          });
+          return {
+            edges: products.map((product) => ({
+              node: product,
+              cursor: Buffer.from(product.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + products.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: products.length > 0 ? Buffer.from(products[0].id.toString()).toString("base64") : null,
+              endCursor: products.length > 0 ? Buffer.from(products[products.length - 1].id.toString()).toString("base64") : null,
             },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
 
-            deleteCoupon: async (_parent, { id }) => {
-                try {
-                    return await prisma.coupon.delete({
-                        where: { id },
-                    });
-                } catch (error) {
-                    return handleError(error);
-                }
+      searchCustomers: async (_, { searchTerm, page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const where = {
+            OR: [
+              { firstName: { contains: searchTerm, mode: "insensitive" } },
+              { lastName: { contains: searchTerm, mode: "insensitive" } },
+              { email: { contains: searchTerm, mode: "insensitive" } },
+            ],
+          };
+          const totalCount = await prisma.customer.count({ where });
+          const customers = await prisma.customer.findMany({
+            where,
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              orders: true,
+              reviews: true,
+              address: true,
             },
-
-            applyCouponToOrder: async (_parent, { orderId, couponCode }) => {
-                try {
-                    const coupon = await prisma.coupon.findUnique({
-                        where: { code: couponCode },
-                    });
-
-                    if (!coupon || !coupon.isActive) {
-                        throw new GraphQLError("Invalid or inactive coupon", {
-                            extensions: { code: "BAD_USER_INPUT" },
-                        });
-                    }
-
-                    if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
-                        throw new GraphQLError("Coupon usage limit reached", {
-                            extensions: { code: "BAD_USER_INPUT" },
-                        });
-                    }
-
-                    const order = await prisma.order.findUnique({
-                        where: { id: orderId },
-                        include: { orderItems: true },
-                    });
-
-                    if (!order) {
-                        throw new GraphQLError("Order not found", {
-                            extensions: { code: "NOT_FOUND" },
-                        });
-                    }
-
-                    const orderTotal = order.orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-                    if (coupon.minPurchaseAmount && orderTotal < coupon.minPurchaseAmount) {
-                        throw new GraphQLError("Order total does not meet minimum purchase amount for this coupon", {
-                            extensions: { code: "BAD_USER_INPUT" },
-                        });
-                    }
-
-                    let discountAmount = 0;
-                    if (coupon.discountType === "PERCENTAGE") {
-                        discountAmount = orderTotal * (coupon.discountValue / 100);
-                    } else {
-                        discountAmount = coupon.discountValue;
-                    }
-
-                    const updatedOrder = await prisma.order.update({
-                        where: { id: orderId },
-                        data: {
-                            discount: discountAmount,
-                            total: orderTotal - discountAmount,
-                        },
-                        include: {
-                            customer: true,
-                            orderItems: {
-                                include: {
-                                    product: true,
-                                },
-                            },
-                        },
-                    });
-
-                    await prisma.coupon.update({
-                        where: { id: coupon.id },
-                        data: {
-                            currentUses: {
-                                increment: 1,
-                            },
-                        },
-                    });
-
-                    return updatedOrder;
-                } catch (error) {
-                    return handleError(error);
-                }
+          });
+          return {
+            edges: customers.map((customer) => ({
+              node: customer,
+              cursor: Buffer.from(customer.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + customers.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: customers.length > 0 ? Buffer.from(customers[0].id.toString()).toString("base64") : null,
+              endCursor: customers.length > 0 ? Buffer.from(customers[customers.length - 1].id.toString()).toString("base64") : null,
             },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
 
-            createProduct: async (_parent, { input }) => {
-                const { variantInputs, collectionIds, tagIds, ...productData } = input;
-            
-                const product = await prisma.product.create({
-                  data: {
-                    ...productData,
-                    category: productData.categoryId
-                      ? { connect: { id: productData.categoryId } }
-                      : undefined,
-                    variants: {
-                      create: variantInputs,
-                    },
-                    collections: collectionIds
-                      ? { connect: collectionIds.map(id => ({ id })) }
-                      : undefined,
-                    tags: tagIds
-                      ? { connect: tagIds.map(id => ({ id })) }
-                      : undefined,
-                  },
-                  include: {
-                    category: true,
-                    variants: true,
-                    collections: true,
-                    tags: true,
-                  },
-                });
-            
-                return product;
-            },
-            
-            updateProduct: async (_parent, { id, input }) => {
-                const { variantInputs, collectionIds, tagIds, ...productData } = input;
-            
-                const product = await prisma.product.update({
-                  where: { id },
-                  data: {
-                    ...productData,
-                    category: productData.categoryId
-                      ? { connect: { id: productData.categoryId } }
-                      : undefined,
-                    variants: {
-                      upsert: variantInputs?.map(variant => ({
-                        where: { id: variant.id },
-                        create: variant,
-                        update: variant,
-                      })),
-                    },
-                    collections: collectionIds
-                      ? { set: collectionIds.map(id => ({ id })) }
-                      : undefined,
-                    tags: tagIds
-                      ? { set: tagIds.map(id => ({ id })) }
-                      : undefined,
-                  },
-                  include: {
-                    category: true,
-                    variants: true,
-                    collections: true,
-                    tags: true,
-                  },
-                });
-            
-                return product;
-            },
-            
-            updateProductInventory: async (_parent, { id, quantity }) => {
-                if (quantity < 0) {
-                  throw new GraphQLError("Quantity cannot be negative", {
-                    extensions: { code: "BAD_USER_INPUT" },
-                  });
-                }
-            
-                const product = await prisma.product.update({
-                  where: { id },
-                  data: { stockQuantity: quantity },
-                  include: {
-                    category: true,
-                    variants: true,
-                    collections: true,
-                    tags: true,
-                  },
-                });
-            
-                return product;
-            },
-            
-            createOrder: async (_parent, { input }) => {
-                const { customerId, shippingAddress, billingAddress, orderItems, couponCode, notes } = input;
-            
-                let discount = 0;
-                let coupon = null;
-            
-                if (couponCode) {
-                  coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
-                  if (!coupon || !coupon.isActive || (coupon.expirationDate && new Date() > coupon.expirationDate)) {
-                    throw new GraphQLError("Invalid or expired coupon", {
-                      extensions: { code: "BAD_USER_INPUT" },
-                    });
-                  }
-                }
-            
-                const orderData = {
-                  customer: { connect: { id: customerId } },
-                  shippingAddress: { create: shippingAddress },
-                  billingAddress: { create: billingAddress },
-                  notes,
-                  status: "PENDING",
-                  orderItems: {
-                    create: await Promise.all(orderItems.map(async (item) => {
-                      const product = await prisma.product.findUnique({ where: { id: item.productId } });
-                      if (!product) {
-                        throw new GraphQLError(`Product with id ${item.productId} not found`, {
-                          extensions: { code: "BAD_USER_INPUT" },
-                        });
-                      }
-                      if (product.stockQuantity < item.quantity) {
-                        throw new GraphQLError(`Insufficient stock for product ${product.name}`, {
-                          extensions: { code: "BAD_USER_INPUT" },
-                        });
-                      }
-                      return {
-                        product: { connect: { id: item.productId } },
-                        quantity: item.quantity,
-                        price: product.price,
-                      };
-                    })),
-                  },
-                };
-            
-                if (coupon) {
-                  orderData.coupon = { connect: { id: coupon.id } };
-                }
-            
-                const order = await prisma.order.create({
-                  data: orderData,
-                  include: {
-                    customer: true,
-                    shippingAddress: true,
-                    billingAddress: true,
-                    orderItems: {
-                      include: {
-                        product: true,
-                      },
-                    },
-                    coupon: true,
-                  },
-                });
-            
-                // Calculate total and apply discount
-                let total = order.orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-            
-                if (coupon) {
-                  if (coupon.discountType === "PERCENTAGE") {
-                    discount = total * (coupon.discountValue / 100);
-                  } else {
-                    discount = coupon.discountValue;
-                  }
-                  total -= discount;
-                }
-            
-                // Update order with total and discount
-                const updatedOrder = await prisma.order.update({
-                  where: { id: order.id },
-                  data: {
-                    total,
-                    discount,
-                  },
-                  include: {
-                    customer: true,
-                    shippingAddress: true,
-                    billingAddress: true,
-                    orderItems: {
-                      include: {
-                        product: true,
-                      },
-                    },
-                    coupon: true,
-                  },
-                });
-            
-                // Update product stock quantities
-                await Promise.all(order.orderItems.map(item =>
-                  prisma.product.update({
-                    where: { id: item.product.id },
-                    data: { stockQuantity: { decrement: item.quantity } },
-                  })
-                ));
-            
-                // Update coupon usage if applicable
-                if (coupon) {
-                  await prisma.coupon.update({
-                    where: { id: coupon.id },
-                    data: { usageCount: { increment: 1 } },
-                  });
-                }
-            
-                return updatedOrder;
-                },  
+      coupon: async (_parent, { id }) => {
+        return prisma.coupon.findUnique({ where: { id } });
+      },
 
-                deleteProduct: async (_, { id }) => {
-                  return prisma.product.delete({ where: { id } });
-                },
-                
-                createCategory: async (_, { input }) => {
-                  return prisma.category.create({ data: input });
-                },
-                
-                updateCategory: async (_, { id, input }) => {
-                  return prisma.category.update({ where: { id }, data: input });
-                },
-                
-                deleteCategory: async (_, { id }) => {
-                  return prisma.category.delete({ where: { id } });
-                },
-                
-                createCollection: async (_, { input }) => {
-                  const { rules, ...collectionData } = input;
-                  return prisma.collection.create({
-                    data: {
-                      ...collectionData,
-                      rules: { create: rules },
-                    },
-                    include: { rules: true },
-                  });
-                },
-                
-                updateCollection: async (_, { id, input }) => {
-                  const { rules, ...collectionData } = input;
-                  return prisma.collection.update({
-                    where: { id },
-                    data: {
-                      ...collectionData,
-                      rules: {
-                        deleteMany: {},
-                        create: rules,
-                      },
-                    },
-                    include: { rules: true },
-                  });
-                },
-                
-                deleteCollection: async (_, { id }) => {
-                  return prisma.collection.delete({ where: { id } });
-                },
-                
-                updateOrderStatus: async (_, { id, status }) => {
-                  return prisma.order.update({
-                    where: { id },
-                    data: { status },
-                    include: {
-                      customer: true,
-                      orderItems: { include: { product: true } },
-                      coupon: true,
-                    },
-                  });
-                },
-                
-                createCustomer: async (_, { input }) => {
-                  const { address, ...customerData } = input;
-                  return prisma.customer.create({
-                    data: {
-                      ...customerData,
-                      address: { create: address },
-                    },
-                    include: { address: true },
-                  });
-                },
-                
-                updateCustomer: async (_, { id, input }) => {
-                  const { address, ...customerData } = input;
-                  return prisma.customer.update({
-                    where: { id },
-                    data: {
-                      ...customerData,
-                      address: address ? { upsert: { create: address, update: address } } : undefined,
-                    },
-                    include: { address: true },
-                  });
-                },
-                
-                deleteCustomer: async (_, { id }) => {
-                  return prisma.customer.delete({ where: { id } });
-                },
-                
-                addProductToCollection: async (_, { productId, collectionId }) => {
-                  return prisma.product.update({
-                    where: { id: productId },
-                    data: { collections: { connect: { id: collectionId } } },
-                    include: { collections: true },
-                  });
-                },
-                
-                removeProductFromCollection: async (_, { productId, collectionId }) => {
-                  return prisma.product.update({
-                    where: { id: productId },
-                    data: { collections: { disconnect: { id: collectionId } } },
-                    include: { collections: true },
-                  });
-                },  
-                
-                recordProductView: async (_, { productId }) => {
-                  return prisma.productAnalytics.upsert({
-                    where: { productId },
-                    update: { viewCount: { increment: 1 } },
-                    create: { productId, viewCount: 1 },
-                  });
-                },
-            
-                recordAddToCart: async (_, { productId }) => {
-                  return prisma.productAnalytics.upsert({
-                    where: { productId },
-                    update: { addToCartCount: { increment: 1 } },
-                    create: { productId, addToCartCount: 1 },
-                  });
-                },
-            
-                updateCustomerAcquisitionCost: async (_, { customerId, cost }) => {
-                  return prisma.customer.update({
-                    where: { id: customerId },
-                    data: { acquisitionCost: cost },
-                  });
+      featuredProducts: async (_parent, { limit = 10 }) => {
+        try {
+          return await prisma.product.findMany({
+            where: { tags: { some: { name: "featured" } } },
+            take: limit,
+            include: {
+              category: true,
+              variants: true,
+              collections: true,
+              tags: true,
+            },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      customerOrders: async (_parent, { customerId, page = 1, perPage = 10 }) => {
+        const skip = (page - 1) * perPage;
+        const [orders, totalCount] = await Promise.all([
+          prisma.order.findMany({
+            where: { customerId },
+            skip,
+            take: perPage,
+            include: { orderItems: { include: { product: true } }, coupon: true },
+            orderBy: { createdAt: 'desc' },
+          }),
+          prisma.order.count({ where: { customerId } }),
+        ]);
+
+        return {
+          edges: orders.map(order => ({
+            node: order,
+            cursor: Buffer.from(order.id.toString()).toString('base64'),
+          })),
+          pageInfo: {
+            hasNextPage: skip + orders.length < totalCount,
+            hasPreviousPage: page > 1,
+            startCursor: orders.length > 0 ? Buffer.from(orders[0].id.toString()).toString('base64') : null,
+            endCursor: orders.length > 0 ? Buffer.from(orders[orders.length - 1].id.toString()).toString('base64') : null,
+          },
+          totalCount,
+        };
+      },
+
+      productsByCollection: async (_parent, { collectionId, page = 1, perPage = 20 }) => {
+        try {
+          validatePagination(page, perPage);
+          const where = { collections: { some: { id: collectionId } } };
+          const totalCount = await prisma.product.count({ where });
+          const products = await prisma.product.findMany({
+            where,
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              category: true,
+              variants: true,
+              collections: true,
+              tags: true,
+            },
+          });
+          return {
+            edges: products.map((product) => ({
+              node: product,
+              cursor: Buffer.from(product.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + products.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: products.length > 0 ? Buffer.from(products[0].id.toString()).toString("base64") : null,
+              endCursor: products.length > 0 ? Buffer.from(products[products.length - 1].id.toString()).toString("base64") : null,
+            },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      reviews: async (_parent, { productId, page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const where = { productId };
+          const totalCount = await prisma.review.count({ where });
+          const reviews = await prisma.review.findMany({
+            where,
+            skip: (page - 1) * perPage,
+            take: perPage,
+            include: {
+              product: true,
+              customer: true,
+            },
+          });
+          return {
+            edges: reviews.map((review) => ({
+              node: review,
+              cursor: Buffer.from(review.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + reviews.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: reviews.length > 0 ? Buffer.from(reviews[0].id.toString()).toString("base64") : null,
+              endCursor: reviews.length > 0 ? Buffer.from(reviews[reviews.length - 1].id.toString()).toString("base64") : null,
+            },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      coupons: async (_parent, { page = 1, perPage = 10 }) => {
+        try {
+          validatePagination(page, perPage);
+          const totalCount = await prisma.coupon.count();
+          const coupons = await prisma.coupon.findMany({
+            skip: (page - 1) * perPage,
+            take: perPage,
+          });
+          return {
+            edges: coupons.map((coupon) => ({
+              node: coupon,
+              cursor: Buffer.from(coupon.id.toString()).toString("base64"),
+            })),
+            pageInfo: {
+              hasNextPage: (page - 1) * perPage + coupons.length < totalCount,
+              hasPreviousPage: page > 1,
+              startCursor: coupons.length > 0 ? Buffer.from(coupons[0].id.toString()).toString("base64") : null,
+              endCursor: coupons.length > 0 ? Buffer.from(coupons[coupons.length - 1].id.toString()).toString("base64") : null,
+            },
+            totalCount,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      salesReport: async (_parent, { startDate, endDate }) => {
+        try {
+          const orders = await prisma.order.findMany({
+            where: {
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+              status: "DELIVERED",
+            },
+            include: {
+              orderItems: {
+                include: {
+                  product: true,
                 },
               },
-        },
+            },
+          });
+
+          const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+          const totalOrders = orders.length;
+          const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+          const productSales = orders.flatMap((order) =>
+            order.orderItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              revenue: item.price * item.quantity,
+            }))
+          );
+
+          const topSellingProducts = Object.values(
+            productSales.reduce((acc, { productId, quantity, revenue }) => {
+              if (!acc[productId]) {
+                acc[productId] = { productId, totalQuantitySold: 0, totalRevenue: 0 };
+              }
+              acc[productId].totalQuantitySold += quantity;
+              acc[productId].totalRevenue += revenue;
+              return acc;
+            }, {})
+          )
+            .sort((a, b) => b.totalRevenue - a.totalRevenue)
+            .slice(0, 5);
+
+          const topSellingProductsWithDetails = await Promise.all(
+            topSellingProducts.map(async ({ productId, totalQuantitySold, totalRevenue }) => ({
+              product: await prisma.product.findUnique({ where: { id: productId } }),
+              totalQuantitySold,
+              totalRevenue,
+            }))
+          );
+
+          return {
+            totalSales,
+            totalOrders,
+            averageOrderValue,
+            topSellingProducts: topSellingProductsWithDetails,
+          };
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      popularProducts: async (_parent, { limit = 10 }) => {
+        try {
+          const popularProducts = await prisma.orderItem.groupBy({
+            by: ["productId"],
+            _sum: {
+              quantity: true,
+            },
+            orderBy: {
+              _sum: {
+                quantity: "desc",
+              },
+            },
+            take: limit,
+          });
+
+          return Promise.all(
+            popularProducts.map(async (item) =>
+              prisma.product.findUnique({
+                where: { id: item.productId },
+                include: {
+                  category: true,
+                  variants: true,
+                  collections: true,
+                  tags: true,
+                },
+              })
+            )
+          );
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      productAnalytics: async (_, { id }) => {
+        const product = await prisma.product.findUnique({ where: { id } });
+        const analytics = await prisma.productAnalytics.findUnique({ where: { productId: id } });
+        return {
+          product,
+          ...analytics,
+          conversionRate: analytics.viewCount > 0 ? analytics.purchaseCount / analytics.viewCount : 0,
+        };
+      },
+
+      categoryAnalytics: async (_, { id }) => {
+        const category = await prisma.category.findUnique({ where: { id } });
+        const products = await prisma.product.findMany({ where: { categoryId: id } });
+        const sales = await prisma.order.findMany({
+          where: { orderItems: { some: { product: { categoryId: id } } } },
+          include: { orderItems: true },
+        });
+
+        const totalSales = sales.reduce((sum, order) =>
+          sum + order.orderItems.reduce((itemSum, item) => itemSum + item.price * item.quantity, 0), 0);
+
+        const topProducts = products.sort((a, b) => b.salesCount - a.salesCount).slice(0, 5);
+
+        return {
+          category,
+          productCount: products.length,
+          totalSales,
+          topProducts,
+        };
+      },
+
+      salesAnalytics: async (_, { startDate, endDate }) => {
+        const orders = await prisma.order.findMany({
+          where: { createdAt: { gte: startDate, lte: endDate } },
+          include: { orderItems: { include: { product: true } } },
+        });
+
+        const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+        const averageOrderValue = totalRevenue / orders.length;
+
+        const productSales = {};
+        orders.forEach(order => {
+          order.orderItems.forEach(item => {
+            if (!productSales[item.productId]) {
+              productSales[item.productId] = { product: item.product, salesCount: 0, revenue: 0 };
+            }
+            productSales[item.productId].salesCount += item.quantity;
+            productSales[item.productId].revenue += item.price * item.quantity;
+          });
+        });
+
+        const topSellingProducts = Object.values(productSales)
+          .sort((a, b) => b.salesCount - a.salesCount)
+          .slice(0, 10)
+          .map(({ product, salesCount, revenue }) => ({
+            product,
+            salesCount,
+            revenue,
+            conversionRate: calculateConversionRate(product.id),
+          }));
+
+        const salesByCategory = await calculateSalesByCategory(orders);
+        const salesByDate = calculateSalesByDate(orders);
+
+        return {
+          totalRevenue,
+          orderCount: orders.length,
+          averageOrderValue,
+          topSellingProducts,
+          salesByCategory,
+          salesByDate,
+        };
+      },
+
+      customerAnalytics: async () => {
+        const customers = await prisma.customer.findMany({
+          include: { orders: true },
+        });
+
+        const totalCustomers = customers.length;
+        const newCustomers = customers.filter(c => c.orders.length === 1).length;
+        const repeatCustomers = totalCustomers - newCustomers;
+
+        const averageLifetimeValue = customers.reduce((sum, customer) =>
+          sum + customer.orders.reduce((orderSum, order) => orderSum + order.total, 0), 0) / totalCustomers;
+
+        const topCustomers = customers
+          .sort((a, b) => calculateLifetimeValue(b) - calculateLifetimeValue(a))
+          .slice(0, 10);
+
+        const customerRetentionRate = repeatCustomers / totalCustomers;
+
+        return {
+          totalCustomers,
+          newCustomers,
+          repeatCustomers,
+          averageLifetimeValue,
+          topCustomers,
+          customerRetentionRate,
+        };
+      },
+
+      inventoryAnalytics: async () => {
+        const products = await prisma.product.findMany();
+
+        const lowStockThreshold = 10; // Example threshold
+        const overStockThreshold = 100; // Example threshold
+
+        const lowStockProducts = products.filter(p => p.stockQuantity > 0 && p.stockQuantity <= lowStockThreshold);
+        const outOfStockProducts = products.filter(p => p.stockQuantity === 0);
+        const overStockProducts = products.filter(p => p.stockQuantity > overStockThreshold);
+
+        const inventoryTurnoverRate = await calculateInventoryTurnoverRate();
+
+        return {
+          lowStockProducts,
+          outOfStockProducts,
+          overStockProducts,
+          inventoryTurnoverRate,
+        };
+      },
+
+      marketingAnalytics: async (_, { startDate, endDate }) => {
+        const cartAbandonmentRate = await calculateCartAbandonmentRate(startDate, endDate);
+        const conversionRate = await calculateConversionRate(startDate, endDate);
+        const averageTimeToConversion = await calculateAverageTimeToConversion(startDate, endDate);
+        const topReferralSources = await getTopReferralSources(startDate, endDate);
+
+        return {
+          cartAbandonmentRate,
+          conversionRate,
+          averageTimeToConversion,
+          topReferralSources,
+        };
+      },
+
+      dashboardSummary: async () => {
+        const totalRevenue = await calculateTotalRevenue();
+        const totalOrders = await prisma.order.count();
+        const totalCustomers = await prisma.customer.count();
+        const averageOrderValue = totalRevenue / totalOrders;
+        const topSellingProducts = await getTopSellingProducts();
+        const recentOrders = await getRecentOrders();
+        const salesTrend = await getSalesTrend();
+        const customerGrowth = await getCustomerGrowth();
+
+        return {
+          totalRevenue,
+          totalOrders,
+          totalCustomers,
+          averageOrderValue,
+          topSellingProducts,
+          recentOrders,
+          salesTrend,
+          customerGrowth,
+        };
+      },
+    },
+
+    Mutation: {
+      // New mutations
+      createReview: async (_parent, { input }) => {
+        const { productId, customerId, rating, comment } = input;
+
+        try {
+          validateRating(rating);
+          return await prisma.review.create({
+            data: {
+              product: { connect: { id: productId } },
+              customer: { connect: { id: customerId } },
+              rating,
+              comment,
+            },
+            include: {
+              product: true,
+              customer: true,
+            },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      updateReview: async (_parent, { id, input }) => {
+        try {
+          if (input.rating) {
+            validateRating(input.rating);
+          }
+          return await prisma.review.update({
+            where: { id },
+            data: input,
+            include: {
+              product: true,
+              customer: true,
+            },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      deleteReview: async (_parent, { id }) => {
+        try {
+          return await prisma.review.delete({
+            where: { id },
+            include: {
+              product: true,
+              customer: true,
+            },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      updateInventory: async (_parent, { productId, quantity }) => {
+        try {
+          if (quantity < 0) {
+            throw new GraphQLError("Quantity cannot be negative", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+          return await prisma.product.update({
+            where: { id: productId },
+            data: { stockQuantity: quantity },
+            include: {
+              category: true,
+              variants: true,
+              collections: true,
+              tags: true,
+            },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      createCoupon: async (_parent, { input }) => {
+        try {
+          if (input.discountValue <= 0) {
+            throw new GraphQLError("Discount value must be greater than 0", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+          return await prisma.coupon.create({
+            data: {
+              ...input,
+              currentUses: 0,
+              isActive: true,
+            },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      updateCoupon: async (_parent, { id, input }) => {
+        try {
+          if (input.discountValue && input.discountValue <= 0) {
+            throw new GraphQLError("Discount value must be greater than 0", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+          return await prisma.coupon.update({
+            where: { id },
+            data: input,
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      deleteCoupon: async (_parent, { id }) => {
+        try {
+          return await prisma.coupon.delete({
+            where: { id },
+          });
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      applyCouponToOrder: async (_parent, { orderId, couponCode }) => {
+        try {
+          const coupon = await prisma.coupon.findUnique({
+            where: { code: couponCode },
+          });
+
+          if (!coupon || !coupon.isActive) {
+            throw new GraphQLError("Invalid or inactive coupon", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+
+          if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
+            throw new GraphQLError("Coupon usage limit reached", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+
+          const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { orderItems: true },
+          });
+
+          if (!order) {
+            throw new GraphQLError("Order not found", {
+              extensions: { code: "NOT_FOUND" },
+            });
+          }
+
+          const orderTotal = order.orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+          if (coupon.minPurchaseAmount && orderTotal < coupon.minPurchaseAmount) {
+            throw new GraphQLError("Order total does not meet minimum purchase amount for this coupon", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+
+          let discountAmount = 0;
+          if (coupon.discountType === "PERCENTAGE") {
+            discountAmount = orderTotal * (coupon.discountValue / 100);
+          } else {
+            discountAmount = coupon.discountValue;
+          }
+
+          const updatedOrder = await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              discount: discountAmount,
+              total: orderTotal - discountAmount,
+            },
+            include: {
+              customer: true,
+              orderItems: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          });
+
+          await prisma.coupon.update({
+            where: { id: coupon.id },
+            data: {
+              currentUses: {
+                increment: 1,
+              },
+            },
+          });
+
+          return updatedOrder;
+        } catch (error) {
+          return handleError(error);
+        }
+      },
+
+      createProduct: async (_parent, { input }) => {
+        const { variantInputs, collectionIds, tagIds, ...productData } = input;
+
+        const product = await prisma.product.create({
+          data: {
+            ...productData,
+            category: productData.categoryId
+              ? { connect: { id: productData.categoryId } }
+              : undefined,
+            variants: {
+              create: variantInputs,
+            },
+            collections: collectionIds
+              ? { connect: collectionIds.map(id => ({ id })) }
+              : undefined,
+            tags: tagIds
+              ? { connect: tagIds.map(id => ({ id })) }
+              : undefined,
+          },
+          include: {
+            category: true,
+            variants: true,
+            collections: true,
+            tags: true,
+          },
+        });
+
+        return product;
+      },
+
+      updateProduct: async (_parent, { id, input }) => {
+        const { variantInputs, collectionIds, tagIds, ...productData } = input;
+
+        const product = await prisma.product.update({
+          where: { id },
+          data: {
+            ...productData,
+            category: productData.categoryId
+              ? { connect: { id: productData.categoryId } }
+              : undefined,
+            variants: {
+              upsert: variantInputs?.map(variant => ({
+                where: { id: variant.id },
+                create: variant,
+                update: variant,
+              })),
+            },
+            collections: collectionIds
+              ? { set: collectionIds.map(id => ({ id })) }
+              : undefined,
+            tags: tagIds
+              ? { set: tagIds.map(id => ({ id })) }
+              : undefined,
+          },
+          include: {
+            category: true,
+            variants: true,
+            collections: true,
+            tags: true,
+          },
+        });
+
+        return product;
+      },
+
+      updateProductInventory: async (_parent, { id, quantity }) => {
+        if (quantity < 0) {
+          throw new GraphQLError("Quantity cannot be negative", {
+            extensions: { code: "BAD_USER_INPUT" },
+          });
+        }
+
+        const product = await prisma.product.update({
+          where: { id },
+          data: { stockQuantity: quantity },
+          include: {
+            category: true,
+            variants: true,
+            collections: true,
+            tags: true,
+          },
+        });
+
+        return product;
+      },
+
+      createOrder: async (_parent, { input }) => {
+        const { customerId, shippingAddress, billingAddress, orderItems, couponCode, notes } = input;
+
+        let discount = 0;
+        let coupon = null;
+
+        if (couponCode) {
+          coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+          if (!coupon || !coupon?.isActive || (coupon?.expirationDate && new Date() > coupon.expirationDate)) {
+            throw new GraphQLError("Invalid or expired coupon", {
+              extensions: { code: "BAD_USER_INPUT" },
+            });
+          }
+        }
+
+        const orderData = {
+          customer: { connect: { id: customerId } },
+          shippingAddress: { create: shippingAddress },
+          billingAddress: { create: billingAddress },
+          notes,
+          coupon,
+          status: "PENDING",
+          orderItems: {
+            create: await Promise.all(orderItems.map(async (item) => {
+              const product = await prisma.product.findUnique({ where: { id: item.productId } });
+              if (!product) {
+                throw new GraphQLError(`Product with id ${item.productId} not found`, {
+                  extensions: { code: "BAD_USER_INPUT" },
+                });
+              }
+              if (product.stockQuantity < item.quantity) {
+                throw new GraphQLError(`Insufficient stock for product ${product.name}`, {
+                  extensions: { code: "BAD_USER_INPUT" },
+                });
+              }
+              return {
+                product: { connect: { id: item.productId } },
+                quantity: item.quantity,
+                price: product.price,
+              };
+            })),
+          },
+        };
+
+        if (coupon) {
+          orderData.coupon = { connect: { id: coupon.id } };
+        }
+
+        const order = await prisma.order.create({
+          data: orderData,
+          include: {
+            customer: true,
+            shippingAddress: true,
+            billingAddress: true,
+            orderItems: {
+              include: {
+                product: true,
+              },
+            },
+            coupon: true,
+          },
+        });
+
+        // Calculate total and apply discount
+        let total = order.orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+        if (coupon) {
+          if (coupon.discountType === "PERCENTAGE") {
+            discount = total * (coupon.discountValue / 100);
+          } else {
+            discount = coupon.discountValue;
+          }
+          total -= discount;
+        }
+
+        // Update order with total and discount
+        const updatedOrder = await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            total,
+            discount,
+          },
+          include: {
+            customer: true,
+            shippingAddress: true,
+            billingAddress: true,
+            orderItems: {
+              include: {
+                product: true,
+              },
+            },
+            coupon: true,
+          },
+        });
+
+        // Update product stock quantities
+        await Promise.all(order.orderItems.map(item =>
+          prisma.product.update({
+            where: { id: item.product.id },
+            data: { stockQuantity: { decrement: item.quantity } },
+          })
+        ));
+
+        // Update coupon usage if applicable
+        if (coupon) {
+          await prisma.coupon.update({
+            where: { id: coupon.id },
+            data: { usageCount: { increment: 1 } },
+          });
+        }
+
+        return updatedOrder;
+      },
+
+      deleteProduct: async (_, { id }) => {
+        return prisma.product.delete({ where: { id } });
+      },
+
+      createCategory: async (_, { input }) => {
+        return prisma.category.create({ data: input });
+      },
+
+      updateCategory: async (_, { id, input }) => {
+        return prisma.category.update({ where: { id }, data: input });
+      },
+
+      deleteCategory: async (_, { id }) => {
+        return prisma.category.delete({ where: { id } });
+      },
+
+      createCollection: async (_, { input }) => {
+        const { rules, ...collectionData } = input;
+        return prisma.collection.create({
+          data: {
+            ...collectionData,
+            rules: { create: rules },
+          },
+          include: { rules: true },
+        });
+      },
+
+      updateCollection: async (_, { id, input }) => {
+        const { rules, ...collectionData } = input;
+        return prisma.collection.update({
+          where: { id },
+          data: {
+            ...collectionData,
+            rules: {
+              deleteMany: {},
+              create: rules,
+            },
+          },
+          include: { rules: true },
+        });
+      },
+
+      deleteCollection: async (_, { id }) => {
+        return prisma.collection.delete({ where: { id } });
+      },
+
+      updateOrderStatus: async (_, { id, status }) => {
+        return prisma.order.update({
+          where: { id },
+          data: { status },
+          include: {
+            customer: true,
+            orderItems: { include: { product: true } },
+            coupon: true,
+          },
+        });
+      },
+
+      createCustomer: async (_, { input }) => {
+        const { address, ...customerData } = input;
+        return prisma.customer.create({
+          data: {
+            ...customerData,
+            address: { create: address },
+          },
+          include: { address: true },
+        });
+      },
+
+      updateCustomer: async (_, { id, input }) => {
+        const { address, ...customerData } = input;
+        return prisma.customer.update({
+          where: { id },
+          data: {
+            ...customerData,
+            address: address ? { upsert: { create: address, update: address } } : undefined,
+          },
+          include: { address: true },
+        });
+      },
+
+      deleteCustomer: async (_, { id }) => {
+        return prisma.customer.delete({ where: { id } });
+      },
+
+      addProductToCollection: async (_, { productId, collectionId }) => {
+        return prisma.product.update({
+          where: { id: productId },
+          data: { collections: { connect: { id: collectionId } } },
+          include: { collections: true },
+        });
+      },
+
+      removeProductFromCollection: async (_, { productId, collectionId }) => {
+        return prisma.product.update({
+          where: { id: productId },
+          data: { collections: { disconnect: { id: collectionId } } },
+          include: { collections: true },
+        });
+      },
+
+      recordProductView: async (_, { productId }) => {
+        return prisma.productAnalytics.upsert({
+          where: { productId },
+          update: { viewCount: { increment: 1 } },
+          create: { productId, viewCount: 1 },
+        });
+      },
+
+      recordAddToCart: async (_, { productId }) => {
+        return prisma.productAnalytics.upsert({
+          where: { productId },
+          update: { addToCartCount: { increment: 1 } },
+          create: { productId, addToCartCount: 1 },
+        });
+      },
+
+      updateCustomerAcquisitionCost: async (_, { customerId, cost }) => {
+        return prisma.customer.update({
+          where: { id: customerId },
+          data: { acquisitionCost: cost },
+        });
+      },
+    },
+  },
 }
 );
 
@@ -1835,7 +1836,7 @@ const calculateLifetimeValue = (customer) => {
 
 const calculateInventoryTurnoverRate = async () => {
   const products = await prisma.product.findMany({ include: { orderItems: true } });
-  const totalCostOfGoodsSold = products.reduce((sum, product) => 
+  const totalCostOfGoodsSold = products.reduce((sum, product) =>
     sum + product.orderItems.reduce((itemSum, item) => itemSum + item.quantity * product.price, 0), 0);
   const averageInventoryValue = products.reduce((sum, product) => sum + product.stockQuantity * product.price, 0) / products.length;
   return totalCostOfGoodsSold / averageInventoryValue;
