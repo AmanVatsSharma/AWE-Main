@@ -1,5 +1,5 @@
-import { schema } from './../../GraphQl/pothos/schema';
 import { createYoga } from "graphql-yoga";
+import schema from "../../GraphQl/testSchema";
 
 export const config = {
     api: {
@@ -9,7 +9,7 @@ export const config = {
 
 export default createYoga({
     schema,
-    graphqlEndpoint: "/api/graphqltwo", // Customize the endpoint if needed
+    graphqlEndpoint: "/api/graphql", // Customize the endpoint if needed
     graphiql: true, // Enable GraphiQL interface
     cors: {
         origin: '*', // Replace with specific origins if needed

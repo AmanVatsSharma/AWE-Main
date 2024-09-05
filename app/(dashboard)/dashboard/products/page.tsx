@@ -61,10 +61,20 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import axios from 'axios'
 import { useQuery } from '@apollo/client'
 import { GetProducts } from '@/ApolloClient/productQueries'
 import { useToast } from '@/components/ui/use-toast'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface Product {
   id: string,
@@ -74,21 +84,49 @@ interface Product {
   category: string
 }
 
+const isFirebaseImage = (url: string) => {
+  return url.includes('firebasestorage.googleapis.com');
+};
+
+
 const ProductPage = () => {
   const { toast } = useToast()
-  const { loading, error, data } = useQuery(GetProducts);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(3);
+  const { loading, error, data } = useQuery(GetProducts, {
+    variables: { perPage, page },
+  });
+
+  const totalPages = data ? Math.ceil(data.products.totalCount / perPage) : 1;
+
+  const handlePreviousPage = () => {
+    if (page > 1) setPage(page - 1);
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) setPage(page + 1);
+  };
+
+  const handlePageChange = (pageNumber: number) => {
+    setPage(pageNumber);
+  };
+
+  const handlePerPageChange = (event) => {
+    setPerPage(parseInt(event.target.value, 10)); // Update perPage state
+    setPage(1); // Reset to first page
+  };
 
   useEffect(() => {
-      if (error) {
-        toast({
-            variant: "destructive",
-            title: "Error!",
-            description: error.message,
-        });
-    } 
-}, [ error, toast]);
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error!",
+        description: error.message,
+      });
+    }
+  }, [error, toast]);
 
-if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4 border-blue-500 rounded-full animate-spin border-t-transparent"/>;
+  // if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4 border-blue-500 rounded-full animate-spin border-t-transparent" />;
 
   return (
     <div className=" flex min-h-screen w-full flex-col bg-muted/40">
@@ -98,13 +136,13 @@ if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href="#">Dashboard</Link>
+                  <Link href="/dashboard/home">Dashboard</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href="#">Products</Link>
+                  <Link href="/dashboard/products">Products</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -113,39 +151,6 @@ if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="relative ml-auto flex-1 md:grow-0">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="overflow-hidden rounded-full"
-              >
-                <Image
-                  src="/placeholder-user.jpg"
-                  width={36}
-                  height={36}
-                  alt="Avatar"
-                  className="overflow-hidden rounded-full"
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </header>
         <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           <Tabs defaultValue="all">
@@ -215,10 +220,19 @@ if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4
                         <TableHead>Status</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Total Sales
+                          Stock
                         </TableHead>
                         <TableHead className="hidden md:table-cell">
-                          Created at
+                          Variants
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Category
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Collections
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Tags
                         </TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
@@ -226,29 +240,57 @@ if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data.products.map((product:any) => (
-                        <TableRow key={product.id}>
+                      {loading &&
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <Skeleton key={i} className="w-full m-3 rounded-md h-[45px]" />
+                        ))
+                      }                      {data ? data.products.edges.map(({ node }: any) => (
+                        <TableRow key={node.id}>
                           <TableCell className="hidden sm:table-cell">
-                            <Image
-                              alt="Product image"
-                              className="aspect-square rounded-md object-cover"
-                              height="64"
-                              src={product.imageUrl[0] ?? '/placeholder.svg'}
-                              width="64"
-                            />
+                            {isFirebaseImage(node.imageUrl[0]) ? (
+                              <Image
+                                alt="Product image"
+                                className="aspect-square rounded-md object-cover"
+                                height="64"
+                                src={node.imageUrl[0] ?? '/placeholder.svg'}
+                                width="64"
+                              />
+                            ) : (
+                              <img
+                                alt="Product image"
+                                className="aspect-square rounded-md object-cover"
+                                height={64}
+                                width={64}
+                                src={node.imageUrl[0] ?? '/placeholder.svg'}
+                              />
+                            )}
+
                           </TableCell>
                           <TableCell className="font-medium">
-                            {product.name}
+                            {node.name}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">Draft</Badge>
                           </TableCell>
-                          <TableCell>${product.price}</TableCell>
+                          <TableCell>${node.price}</TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {product.stockQuantity}
+                            {node.stockQuantity}
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {product.variants}
+                          <TableCell className="hidden items-center md:table-cell md:flex gap-2 flex-wrap">
+                            {node.variants.map((varient: any) => (
+                              <div key={varient.sku} className='flex gap-2 border rounded-sm text-center p-1'>
+                                SKU: {varient.sku}<br /> Stock: {varient.stockQuantity}
+                              </div>
+                            ))}
+                          </TableCell>
+                          <TableCell>{node.category?.name ? node.category.name : 'Not in a category'}</TableCell>
+                          <TableCell>          {node.collections.length > 0 ? (
+                            <p>Collections: {node.collections.map((col: any) => col.title).join(", ")}</p>
+                          ) : 'Not in collections'}
+                          </TableCell>
+                          <TableCell>{node.tags.length > 0 ? (
+                            <p>Tags: {node.tags.map((tag: any) => tag.name).join(", ")}</p>
+                          ) : 'No tags'}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -270,7 +312,7 @@ if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )) : <div className='w-full'> No Products Found</div>}
 
                       {/* <TableRow>
                         <TableCell className="hidden sm:table-cell">
@@ -533,11 +575,71 @@ if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4
                     </TableBody>
                   </Table>
                 </CardContent>
-                <CardFooter>
-                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-10</strong> of <strong>32</strong>{" "}
-                    products
+                <CardFooter className='text-xs text-muted-foreground'>
+                  <div className="">
+                    {/* Header for pagination info */}
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        Showing {(page - 1) * perPage + 1} - {Math.min(page * perPage, data?.products.totalCount || 0)} of{" "}
+                        {data?.products.totalCount || 0} products
+                      </div>
+
+                      {/* Selector for products per page */}
+                      <div>
+                        <label htmlFor="perPage" className="mr-2">Products per page:</label>
+                        <select id="perPage" value={perPage} onChange={handlePerPageChange} className="border p-1 rounded">
+                          {[3, 5, 10, 20].map((number) => (
+                            <option key={number} value={number}>
+                              {number}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
+                  <div className='ml-20'>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handlePreviousPage();
+                            }}
+                          />
+                        </PaginationItem>
+
+                        {[...Array(totalPages)].map((_, index) => (
+                          <PaginationItem key={index}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handlePageChange(index + 1);
+                              }}
+                            >
+                              {index + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        {totalPages > 5 && <PaginationEllipsis />}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleNextPage();
+                            }}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+
+                  </div>
+
                 </CardFooter>
               </Card>
             </TabsContent>

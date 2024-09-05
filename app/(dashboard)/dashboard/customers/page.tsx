@@ -1,5 +1,4 @@
 'use client'
-import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -53,10 +52,15 @@ import { Input } from "@/components/ui/input"
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "@/components/ui/use-toast"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   Table,
@@ -74,14 +78,48 @@ import {
 } from "@/components/ui/tabs"
 import { useQuery } from "@apollo/client"
 import { GetCustomers } from "@/ApolloClient/customerQueries"
+import { useEffect, useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type Props = {}
 
 const Page = (props: Props) => {
-  const { loading, error, data } = useQuery(GetCustomers);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(5);
 
-  if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4 border-blue-500 rounded-full animate-spin border-t-transparent"></div>;
-  if (error) return <p>Error: {error.message}</p>;
+  const { loading, error, data } = useQuery(GetCustomers, {
+    variables: { page, perPage },
+  });
+
+  useEffect(() => {
+    error && toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    })
+  }, [error])
+
+  const { hasNextPage, hasPreviousPage } = data?.customers.pageInfo || false;
+
+  // Handlers for changing pages
+  const handleNextPage = () => {
+    if (hasNextPage) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (hasPreviousPage) {
+      setPage((prevPage) => Math.max(prevPage - 1, 1));
+    }
+  };
+
+  const handlePerPageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setPerPage(Number(event.target.value));
+    setPage(1);
+  };
+
+  // if (loading) return <div className="absolute top-1/2 left-1/2 w-10 h-10 border-4 border-blue-500 rounded-full animate-spin border-t-transparent"></div>;
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -107,7 +145,7 @@ const Page = (props: Props) => {
             </BreadcrumbList>
           </Breadcrumb>
           <Link href={'/dashboard/customers/new'}>
-          <Button >Create New Customer</Button>
+            <Button >Create New Customer</Button>
           </Link>
 
         </header>
@@ -170,7 +208,7 @@ const Page = (props: Props) => {
                         <TableRow>
                           <TableHead>Customer</TableHead>
                           <TableHead className="hidden sm:table-cell">
-                            Type
+                            Phone
                           </TableHead>
                           <TableHead className="hidden sm:table-cell">
                             Status
@@ -182,16 +220,21 @@ const Page = (props: Props) => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data.customers.map((customer: any) => (
-                          <TableRow key={customer.id} className="hover:bg-accent">
+                        {loading &&
+                          Array.from({ length: 7 }).map((_, i) => (
+                            <Skeleton key={i} className="w-full m-3 rounded-md h-[45px]" />
+                          ))
+                        }
+                        {data ? data.customers.edges.map(({ node }: any) => (
+                          <TableRow key={node.id} className="hover:bg-accent">
                             <TableCell>
-                              <div className="font-medium">{customer.firstName} {customer.lastName}</div>
+                              <div className="font-medium">{node.firstName} {node.lastName}</div>
                               <div className="hidden text-sm text-muted-foreground md:inline">
-                                {customer.email}
+                                {node.email}
                               </div>
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
-                              {customer.phoneNumber}
+                              {node.phoneNumber}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               <Badge className="text-xs" variant="secondary">
@@ -203,7 +246,7 @@ const Page = (props: Props) => {
                             </TableCell>
                             <TableCell className="text-right">$250.00</TableCell>
                           </TableRow>
-                        ))}
+                        )) : 'unable to query database'}
                         {/* <TableRow>
                           <TableCell>
                             <div className="font-medium">Olivia Smith</div>
@@ -347,6 +390,46 @@ const Page = (props: Props) => {
                       </TableBody>
                     </Table>
                   </CardContent>
+                  <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3">
+                    <div className="flex items-center justify-between">
+
+                      {/* Items Per Page Selector */}
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <label htmlFor="perPage" className="mr-2">Products per page:</label>
+
+                        <select
+                          id="perPage"
+                          value={perPage}
+                          onChange={handlePerPageChange}
+                          className="border p-1 rounded"
+                        >
+                          {[3, 5, 10, 20].map((number) => (
+                            <option key={number} value={number}>
+                              {number}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious href="#" onClick={handlePreviousPage} className={hasPreviousPage ? '' : 'opacity-45'} />
+                          </PaginationItem>
+                          <PaginationItem>
+                            <PaginationLink href="#" onClick={() => setPage(1)}>1</PaginationLink>
+                          </PaginationItem>
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                          <PaginationItem>
+                            <PaginationNext href="#" onClick={handleNextPage} className={hasNextPage? '' : 'opacity-45'} />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+
+                    </div>
+                  </CardFooter>
                 </Card>
               </TabsContent>
             </Tabs>
@@ -503,6 +586,7 @@ const Page = (props: Props) => {
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>
+
               </CardFooter>
             </Card>
           </div>

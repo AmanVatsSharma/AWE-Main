@@ -47,28 +47,49 @@ export const CREATE_PRODUCT = gql`
   }
 `;
 
-export const GetProducts = gql`
-query {
-  products {
-    id
-    name
-    description
-    price
-    imageUrl
-    stockQuantity
-    variants {
-      sku
-      stockQuantity
-    }
-    category {
-      name
-    }
-    collections {
-      title
-    }
-    tags{
-      name
+export const SEARCH_PRODUCTS = gql`
+  query SearchProducts($searchTerm: String!) {
+    searchProducts(searchTerm: $searchTerm, perPage: 5) {
+      edges {
+        node {
+          id
+          name
+          description
+          price
+          imageUrl
+        }
+      }
     }
   }
-}
-`
+`;
+
+export const GetProducts = gql`
+  query GetProducts($perPage: Int!, $page: Int!) {
+    products(perPage: $perPage, page: $page) {
+      edges {
+        node {
+          id
+          name
+          description
+          price
+          imageUrl
+          stockQuantity
+          variants {
+            sku
+            stockQuantity
+          }
+          category {
+            name
+          }
+          collections {
+            title
+          }
+          tags {
+            name
+          }
+        }
+      }
+      totalCount
+    }
+  }
+`;

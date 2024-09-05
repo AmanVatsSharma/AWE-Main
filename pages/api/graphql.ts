@@ -1,5 +1,5 @@
 import { createYoga } from "graphql-yoga";
-import schema from "../../GraphQl/schema";
+import schema from "../../GraphQl/testSchema";
 
 export const config = {
     api: {

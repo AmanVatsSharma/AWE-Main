@@ -67,3 +67,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Global styles for scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0; /* Custom thumb and track colors */
+}
+
+*::-webkit-scrollbar {
+  width: 8px; /* Thin scrollbar */
+  height: 8px; /* Thin scrollbar for horizontal scroll */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #94a3b8; /* Thumb color */
+  border-radius: 9999px; /* Rounded scrollbar thumb */
+}
+
+*::-webkit-scrollbar-track {
+  background-color: #e2e8f0; /* Track color */
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b; /* Thumb color on hover */
+}

@@ -18,6 +18,8 @@ const schema = createSchema({
     orders: [Order]
     customer(id: Int!): Customer
     customers: [Customer]
+    searchProducts(searchTerm: String!): [Product!]!
+    searchCustomers(searchTerm: String!): [Customer!]!
   }
 
   type Mutation {
@@ -62,7 +64,14 @@ const schema = createSchema({
       customerId: Int!,
       shippingAddress: AddressInput!,
       billingAddress: AddressInput!,
-      orderItems: [OrderItemInput]!
+      orderItems: [OrderItemInput]!,
+      tags: [String],
+      notes: String,
+      discount: Float,
+      shippingFees: Float,
+      otherFees: Float,
+      taxRate: Float,
+      collectPaymentLater: Boolean
     ): Order
     updateOrderStatus(id: Int!, status: OrderStatus!): Order
     createCustomer(
@@ -202,7 +211,6 @@ input UpdateProductVariantInput {
     key: String!
     value: String!
     collection: Collection!
-
   }
 
   type Order {
@@ -215,6 +223,13 @@ input UpdateProductVariantInput {
     billingAddress: Address
     orderItems: [OrderItem]
     total: Float
+    notes: String
+    discount: Float
+    shippingFees: Float
+    otherFees: Float
+    taxRate: Float
+    collectPaymentLater: Boolean
+    tags: [Tag]
   }
 
   type OrderItem {
@@ -283,6 +298,28 @@ input UpdateProductVariantInput {
         };
         return await prisma.product.findMany(filters);
       },
+      searchProducts: async (_, { searchTerm }) => {
+        return await prisma.product.findMany({
+          where: {
+            OR: [
+              { name: { contains: searchTerm, mode: 'insensitive' } },
+              { description: { contains: searchTerm, mode: 'insensitive' } }
+            ]
+          }
+        });
+      },
+      searchCustomers: async (_, { searchTerm }) => {
+        return await prisma.customer.findMany({
+          where: {
+            OR: [
+              { firstName: { contains: searchTerm, mode: 'insensitive' } },
+              { lastName: { contains: searchTerm, mode: 'insensitive' } },
+              { email: { contains: searchTerm, mode: 'insensitive' } },
+              { phoneNumber: { contains: searchTerm, mode: 'insensitive' } },
+            ]
+          }
+        });
+      },
       product: async (_parent, args) =>
         await prisma.product.findUnique({ where: { id: args.id } }),
       categories: async () => await prisma.category.findMany(),
@@ -337,7 +374,6 @@ input UpdateProductVariantInput {
 
         return product;
       },
-
       updateProduct: async (_parent, args) => {
         const {
           name,
@@ -441,24 +477,63 @@ input UpdateProductVariantInput {
         });
       },
       createOrder: async (_parent, args) => {
-        return await prisma.order.create({
-          data: {
-            customerId: args.customerId,
-            shippingAddress: args.shippingAddress,
-            billingAddress: args.billingAddress,
-            orderItems: {
-              create: args.orderItems.map((item: any) => ({
-                quantity: item.quantity,
-                productId: item.productId,
-              })),
+        const { customerId, shippingAddress, billingAddress, orderItems, tags, notes, discount, shippingFees, otherFees, taxRate, collectPaymentLater } = args;
+
+        let totalPrice = 0;
+
+        for (const item of orderItems) {
+          const product = await prisma.product.findUnique({ where: { id: item.productId } });
+          if (product) {
+            totalPrice += (product.price || 0) * item.quantity;
+          }
+        }
+
+        const totalWithFees = totalPrice + shippingFees + otherFees - discount;
+        const totalWithTax = totalWithFees + (totalWithFees * taxRate) / 100;
+
+        try {
+          return await prisma.order.create({
+            data: {
+              customer: {
+                connect: { id: customerId }
+              },
+              shippingAddress: {
+                create: shippingAddress,
+              },
+              billingAddress: {
+                create: billingAddress,
+              },
+              orderItems: {
+                create: orderItems.map((item: any) => ({
+                  quantity: item.quantity,
+                  productId: item.productId,
+                  price: item.price || 0,
+                })),
+              },
+              tags,
+              notes,
+              discount,
+              shippingFees,
+              otherFees,
+              taxRate,
+              collectPaymentLater,
+              total: totalWithTax,
+              status: 'PENDING',
             },
-          },
-        });
+          });
+        } catch (error) {
+          console.error('Error creating order:', error);
+          throw new Error('Failed to create order: ' + error.message + error.cause);
+        }
       },
       updateOrderStatus: async (_parent, args) => {
         return await prisma.order.update({
-          where: { id: args.id },
-          data: { status: args.status },
+          where: {
+            id: args.id,
+          },
+          data: {
+            status: args.status,
+          },
         });
       },
       createCustomer: async (_parent, args) => {
@@ -506,6 +581,7 @@ input UpdateProductVariantInput {
       },
     },
   },
-});
+}
+);
 
 export default schema;

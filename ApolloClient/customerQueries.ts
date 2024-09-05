@@ -1,16 +1,50 @@
 import { gql } from "@apollo/client";
 
 export const GetCustomers = gql`
-  query {
-    customers {
-      id
-      firstName
-      lastName
-      email
-      phoneNumber
+  query Customers($page: Int!, $perPage: Int!) {
+    customers(page: $page, perPage: $perPage) {
+      edges {
+        node {
+          id
+          firstName
+          lastName
+          email
+          phoneNumber
+        }
+        cursor
+      }
+      totalCount
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
     }
   }
 `;
+
+export const SEARCH_CUSTOMERS = gql`
+  query SearchCustomers($searchTerm: String!) {
+    searchCustomers(searchTerm: $searchTerm, perPage: 5) {
+      edges {
+        node {
+          id
+          firstName
+          lastName
+          email
+          phoneNumber
+          address {
+            city
+            state
+            pincode
+          }
+        }
+      }
+    }
+  }
+`;
+
 
 export const GET_CUSTOMER = gql`
   query GetCustomer($id: Int!) {
