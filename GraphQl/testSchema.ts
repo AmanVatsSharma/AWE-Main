@@ -1878,7 +1878,6 @@ const getTopSellingProducts = async () => {
   return prisma.product.findMany({
     orderBy: { salesCount: 'desc' },
     take: 5,
-    include: { category: true }
   });
 };
 

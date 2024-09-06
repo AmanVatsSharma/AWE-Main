@@ -61,10 +61,11 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import axios from 'axios'
 import ProductImageUploader from '@/components/Products/ProductImageUploader'
-import { useMutation } from '@apollo/client'
+import { useMutation, useQuery } from '@apollo/client'
 import { CREATE_PRODUCT } from '@/ApolloClient/productQueries'
 import { useToast } from '@/components/ui/use-toast'
 import { redirect } from 'next/navigation'
+import { GET_CATEGORIES_LIST } from '@/ApolloClient/CategoriesQueries'
 
 type Props = {}
 
@@ -97,32 +98,44 @@ const ProductNewPage = (props: Props) => {
     variants: [],
   });
 
+  const { data: categoriesData, loading: categoriesLoading, error: categoriesError } = useQuery(GET_CATEGORIES_LIST);
+
   const [featured, setFeatured] = useState(false);
   const [trending, setTrending] = useState(false);
   const [categories, setCategories] = useState<category[]>([]);
+
+
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     try {
       console.log(productData)
-        await createProduct({
-            variables: productData,
-        });
+      await createProduct({
+        variables: productData,
+      });
     } catch (e) {
-        console.error(e);
+      console.error(e);
     }
-};
+  };
 
-const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  const { name, value } = e.target;
-  setProductData(prevState => ({
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setProductData(prevState => ({
       ...prevState,
       [name]: value,
-  }));
-};
+    }));
+  };
 
-const handleFilesUploaded = (images: { file: File; preview: string; url?: string }[]) => {
+  const handleCategoryChange = (value: string) => {
+    setProductData({
+      ...productData,
+      categoryId: value ? parseInt(value, 10) : null, // Convert to number or set to null
+    });
+  };
+
+
+  const handleFilesUploaded = (images: { file: File; preview: string; url?: string }[]) => {
     // Store the uploaded image URLs in form data
     const urls = images.map(image => image.url || '');
     setProductData(prevData => ({
@@ -133,24 +146,30 @@ const handleFilesUploaded = (images: { file: File; preview: string; url?: string
 
   useEffect(() => {
     if (loading) {
-        toast({
-            title: "Loading!",
-            description: "Please wait while loading",
-        });
+      toast({
+        title: "Loading!",
+        description: "Please wait while loading",
+      });
     } else if (error) {
-        toast({
-            variant: "destructive",
-            title: "Error!",
-            description: error.message,
-        });
+      toast({
+        variant: "destructive",
+        title: "Error!",
+        description: error.message,
+      });
     } else if (data) {
-        toast({
-            title: "Product created successfully!",
-            description: `Added new Product ${data.createProduct.name}`,
-        });
-        return redirect('/dashboard/products')
+      toast({
+        title: "Product created successfully!",
+        description: `Added new Product ${data.createProduct.name}`,
+      });
+      return redirect('/dashboard/products')
     }
-}, [loading, error, data, toast]);
+    if (categoriesData) {
+      setCategories(categoriesData.categories)
+      console.log('categories', categories)
+      console.log('categoriesData', categoriesData)
+
+    }
+  }, [loading, error, data, toast, categoriesData, categories]);
 
 
 
@@ -492,7 +511,7 @@ const handleFilesUploaded = (images: { file: File; preview: string; url?: string
                       <div className="grid gap-6 sm:grid-cols-3">
                         <div className="grid gap-3">
                           <Label htmlFor="category">Category</Label>
-                          <Select>
+                          <Select onValueChange={handleCategoryChange}>
                             <SelectTrigger
                               id="category"
                               aria-label="Select category"
@@ -500,9 +519,10 @@ const handleFilesUploaded = (images: { file: File; preview: string; url?: string
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.map(category => (
-                                <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id.toString()}>
+                                  {category.name}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

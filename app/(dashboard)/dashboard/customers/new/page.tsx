@@ -489,7 +489,7 @@ const CustomerNewPage = (props: Props) => {
         email: '',
         phoneNumber: '',
         notes: '',
-        tags: [] as string[],
+        tags: [],
         country: '',
         address: {
             address: '',

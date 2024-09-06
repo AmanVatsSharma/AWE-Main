@@ -380,43 +380,46 @@ import { ChevronLeft, ChevronRight, Copy, MoreHorizontal, PenSquare, Plus, Send,
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import AdvancedLoader from '@/components/common/AdvancedLoader'
 
 // Sample data to use when no GraphQL data is available
 const sampleCustomerData = {
-  id: "customer-123",
-  name: "John Doe",
-  email: "john.doe@example.com",
-  phone: "+1 (555) 123-4567",
-  address: {
-    street: "123 Main St",
-    city: "Anytown",
-    postalCode: "12345",
-    country: "USA"
-  },
-  orders: [
-    { id: "order-1", date: "2023-01-15", total: 150.00, status: "Delivered" },
-    { id: "order-2", date: "2023-03-22", total: 89.99, status: "Shipped" },
-    { id: "order-3", date: "2023-06-10", total: 210.50, status: "Processing" }
-  ],
-  lifetime_value: 450.49,
-  average_order_value: 150.16,
-  total_orders: 3,
-  last_purchase_date: "2023-06-10",
-  customer_segment: "Regular",
-  product_recommendations: [
-    { id: "prod-1", name: "Premium Headphones", price: 199.99 },
-    { id: "prod-2", name: "Wireless Charger", price: 49.99 },
-    { id: "prod-3", name: "Smart Watch", price: 299.99 }
-  ]
+    id: "customer-123",
+    firstName: "John",
+    lastName: "Doe",
+    email: "john.doe@example.com",
+    phoneNumber: "+1 (555) 123-4567",
+    address: {
+        address: "123 Main St",
+        landmark: "beside hospital",
+        city: "Anytown",
+        pincode: "12345",
+        state: "USA"
+    },
+    orders: [
+        { id: "order-1", date: "2023-01-15", total: 150.00, status: "Delivered" },
+        { id: "order-2", date: "2023-03-22", total: 89.99, status: "Shipped" },
+        { id: "order-3", date: "2023-06-10", total: 210.50, status: "Processing" }
+    ],
+    lifetimeValue: 451.49,
+    average_order_value: 150.16,
+    total_orders: 3,
+    last_purchase_date: "2023-06-10",
+    customer_segment: "Regular",
+    product_recommendations: [
+        { id: "prod-1", name: "Premium Headphones", price: 199.99 },
+        { id: "prod-2", name: "Wireless Charger", price: 49.99 },
+        { id: "prod-3", name: "Smart Watch", price: 299.99 }
+    ]
 }
 
 const purchaseHistory = [
-  { month: 'Jan', amount: 150 },
-  { month: 'Feb', amount: 0 },
-  { month: 'Mar', amount: 89.99 },
-  { month: 'Apr', amount: 0 },
-  { month: 'May', amount: 0 },
-  { month: 'Jun', amount: 210.50 },
+    { month: 'Jan', amount: 150 },
+    { month: 'Feb', amount: 0 },
+    { month: 'Mar', amount: 89.99 },
+    { month: 'Apr', amount: 0 },
+    { month: 'May', amount: 0 },
+    { month: 'Jun', amount: 210.50 },
 ]
 
 export default function Component() {
@@ -438,7 +441,7 @@ export default function Component() {
         }
     }
 
-    if (loading) return <p>Loading...</p>
+    if (loading) return <AdvancedLoader/>
     if (error) return <p>Error: {error.message}</p>
 
     const customer = data?.customer || sampleCustomerData
@@ -471,12 +474,12 @@ export default function Component() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center space-x-4">
                         <Avatar className="h-12 w-12">
-                            <AvatarImage src="/placeholder.svg?height=50&width=50" alt={customer.name} />
-                            <AvatarFallback>{customer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            <AvatarImage src="/placeholder.svg?height=50&width=50" alt={customer.firstName} />
+                            <AvatarFallback>{customer.firstName}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <h1 className="text-2xl font-bold">{customer.name}</h1>
-                            <p className="text-sm text-muted-foreground">{customer.address?.city}, {customer.address?.country} • Customer for 9 months</p>
+                            <h1 className="text-2xl font-bold">{customer.firstName} {customer.lastName}</h1>
+                            <p className="text-sm text-muted-foreground">{customer.address?.city}, {customer.address?.state} • Customer for 9 months</p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -507,14 +510,14 @@ export default function Component() {
                                             <div>
                                                 <h3 className="font-semibold mb-2">Contact Information</h3>
                                                 <p>Email: {customer.email}</p>
-                                                <p>Phone: {customer.phone}</p>
+                                                <p>Phone: {customer.phoneNumber}</p>
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold mb-2">Address</h3>
-                                                <p>{customer.name}</p>
-                                                <p>{customer.address?.street}</p>
-                                                <p>{customer.address?.city} {customer.address?.postalCode}</p>
-                                                <p>{customer.address?.country}</p>
+                                                <p>{customer.firstName} {customer.lastName}</p>
+                                                <p>{customer.address?.address}, {customer.address?.landmark}</p>
+                                                <p>{customer.address?.city} {customer.address?.pincode}</p>
+                                                <p>{customer.address?.state}</p>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -526,7 +529,7 @@ export default function Component() {
                                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${customer.lifetime_value.toFixed(2)}</div>
+                                            <div className="text-2xl font-bold">${customer.lifetimeValue.toFixed(2)}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -556,6 +559,15 @@ export default function Component() {
                                             <div className="text-2xl font-bold">{new Date(customer.last_purchase_date).toLocaleDateString()}</div>
                                         </CardContent>
                                     </Card>
+                                    <Card>
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle>
+                                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold">${customer.average_order_value.toFixed(2)}</div>
+                                        </CardContent>
+                                        </Card>
                                 </div>
                             </TabsContent>
                             <TabsContent value="orders">

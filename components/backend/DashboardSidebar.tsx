@@ -249,6 +249,10 @@ const sidebarMainListLinks = [
                 label: "Categories",
                 href: "/dashboard/products/categories",
             },
+            {
+                label: "Collections",
+                href: "/dashboard/products/collections",
+            },
         ],
     },
     {

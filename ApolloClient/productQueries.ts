@@ -13,15 +13,17 @@ export const CREATE_PRODUCT = gql`
     $tagIds: [Int]
   ) {
     createProduct(
-      name: $name
-      description: $description
-      price: $price
-      imageUrl: $imageUrl
-      stockQuantity: $stockQuantity
-      categoryId: $categoryId
-      variantInputs: $variantInputs
-      collectionIds: $collectionIds
-      tagIds: $tagIds
+      input: {
+        name: $name
+        description: $description
+        price: $price
+        imageUrl: $imageUrl
+        stockQuantity: $stockQuantity
+        categoryId: $categoryId
+        variantInputs: $variantInputs
+        collectionIds: $collectionIds
+        tagIds: $tagIds
+      }
     ) {
       id
       name
@@ -90,6 +92,39 @@ export const GetProducts = gql`
         }
       }
       totalCount
+    }
+  }
+`;
+
+export const GET_PRODUCT = gql`
+  query product($id: Int!) {
+    product(id: $id) {
+      id
+    name
+    description
+    price
+    imageUrl
+    stockQuantity
+    variants{
+      id
+      sku
+      size
+      color
+      price
+      stockQuantity
+    }
+    category{
+      name
+    }
+    collections{
+      title
+    }
+    tags{
+      name
+    }
+    averageRating
+    salesCount
+    revenue
     }
   }
 `;

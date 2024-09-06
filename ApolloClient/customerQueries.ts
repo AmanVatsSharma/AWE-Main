@@ -69,13 +69,15 @@ export const CREATE_CUSTOMER = gql`
     $address: AddressInput
   ) {
     createCustomer(
-      firstName: $firstName,
-      lastName: $lastName,
-      email: $email,
-      phoneNumber: $phoneNumber,
-      notes: $notes,
-      tags: $tags,
-      address: $address
+      input:{
+        firstName: $firstName,
+        lastName: $lastName,
+        email: $email,
+        phoneNumber: $phoneNumber,
+        notes: $notes,
+        tags: $tags,
+        address: $address
+      }
     ) {
       id
       firstName

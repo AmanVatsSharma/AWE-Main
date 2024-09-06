@@ -520,7 +520,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -532,6 +532,11 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useQuery } from '@apollo/client'
+import { GET_PRODUCT } from '@/ApolloClient/productQueries'
+import { useParams } from 'next/navigation'
+import Image from 'next/image'
+import AdvancedLoader from '@/components/common/AdvancedLoader'
 
 // Sample product data
 const sampleProductData = {
@@ -541,8 +546,14 @@ const sampleProductData = {
   description: "High-quality wireless headphones with noise cancellation and long battery life.",
   price: 199.99,
   cost: 89.99,
-  category: "Electronics",
-  tags: ["wireless", "audio", "premium"],
+  category: {
+    name: "Electronics",
+  },
+  tags: [
+    { name: "wireless", },
+    { name: "audio", },
+    { name: "premium" }
+  ],
   inventory: {
     inStock: 250,
     reserved: 10,
@@ -575,6 +586,12 @@ const sampleProductData = {
 export default function Component() {
   const [product, setProduct] = useState(sampleProductData)
   const [newTag, setNewTag] = useState("")
+  const params = useParams()
+  const productId = Array.isArray(params?.productId) ? parseInt(params.productId[0]) : parseInt(params?.productId);
+
+  const { loading, error, data } = useQuery(GET_PRODUCT, {
+    variables: { id: productId },
+  });
 
   const addTag = () => {
     if (newTag.trim() && !product.tags.includes(newTag.trim())) {
@@ -585,6 +602,13 @@ export default function Component() {
       setNewTag("")
     }
   }
+
+  useEffect(() => {
+    if (data) { setProduct(data.product) }
+  }, [data])
+
+  if (loading)
+    return <AdvancedLoader/>
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -613,8 +637,8 @@ export default function Component() {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-bold">{product.name}</h1>
-            <p className="text-sm text-muted-foreground">SKU: {product.sku} • Category: {product.category}</p>
+            <h1 className="text-2xl font-bold capitalize">{product.name}</h1>
+            <p className="text-sm text-muted-foreground">SKU: {product.sku ?? "no sku found"} • Category: {product?.category?.name ?? "no category found"}</p>
           </div>
           <div className="flex items-center space-x-2">
             <Button>
@@ -651,10 +675,31 @@ export default function Component() {
                       <div>
                         <h3 className="font-semibold mb-2">Pricing</h3>
                         <p>Retail Price: ${product.price.toFixed(2)}</p>
-                        <p>Cost: ${product.cost.toFixed(2)}</p>
+                        <p>Cost: ${product?.cost ? product.cost.toFixed(2) : ""}</p>
                         <p>Profit Margin: {((product.price - product.cost) / product.price * 100).toFixed(2)}%</p>
                       </div>
                     </div>
+                    <div>
+                      {product.imageUrl && (
+                        <>
+                          <h3 className="font-semibold my-5">Images</h3>
+                          <div className="flex gap-5">
+
+                          {product.imageUrl.map((url, index) => (
+                            <Image
+                              key={index}
+                              src={url}
+                              width={100}
+                              height={100}
+                              alt={`Product image ${index + 1}`}
+                            />
+                          ))}
+                          </div>
+
+                        </>
+                      )}
+                    </div>
+
                   </CardContent>
                 </Card>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
@@ -664,7 +709,7 @@ export default function Component() {
                       <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{product.inventory.inStock}</div>
+                      <div className="text-2xl font-bold">{product?.stockQuantity ?? "no Inventory"}</div>
                     </CardContent>
                   </Card>
                   <Card>
@@ -673,7 +718,7 @@ export default function Component() {
                       <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{product.salesData.reduce((sum, data) => sum + data.sales, 0)}</div>
+                      <div className="text-2xl font-bold">{product.salesData && product.salesData.reduce((sum, data) => sum + data.sales, 0)}</div>
                     </CardContent>
                   </Card>
                   <Card>
@@ -683,7 +728,7 @@ export default function Component() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${product.salesData.reduce((sum, data) => sum + data.revenue, 0).toFixed(2)}
+                        ${product.salesData && product.salesData.reduce((sum, data) => sum + data.revenue, 0).toFixed(2)}
                       </div>
                     </CardContent>
                   </Card>
@@ -694,7 +739,7 @@ export default function Component() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {(product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length).toFixed(1)}
+                        {product.reviews && (product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length).toFixed(1)}
                       </div>
                     </CardContent>
                   </Card>
@@ -709,15 +754,15 @@ export default function Component() {
                     <div className="space-y-4">
                       <div>
                         <h3 className="font-semibold mb-2">Current Stock</h3>
-                        <p>In Stock: {product.inventory.inStock}</p>
-                        <p>Reserved: {product.inventory.reserved}</p>
-                        <p>Available: {product.inventory.inStock - product.inventory.reserved}</p>
+                        <p>In Stock: {product?.inventory?.inStock}</p>
+                        <p>Reserved: {product?.inventory?.reserved}</p>
+                        <p>Available: {product?.inventory && (product.inventory.inStock - product.inventory.reserved)}</p>
                       </div>
                       <div>
                         <h3 className="font-semibold mb-2">Reorder Information</h3>
-                        <p>Reorder Point: {product.inventory.reorderPoint}</p>
-                        <p>Supplier: {product.supplier.name}</p>
-                        <p>Lead Time: {product.supplier.leadTime}</p>
+                        <p>Reorder Point: {product?.inventory?.reorderPoint}</p>
+                        <p>Supplier: {product?.supplier?.name}</p>
+                        <p>Lead Time: {product?.supplier?.leadTime}</p>
                       </div>
                       <Button>Update Inventory</Button>
                     </div>
@@ -731,7 +776,7 @@ export default function Component() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={product.salesData}>
+                      <LineChart data={product?.salesData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis yAxisId="left" />
@@ -759,13 +804,13 @@ export default function Component() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {product.variants.map((variant) => (
+                        {product.variants ? product.variants.map((variant) => (
                           <TableRow key={variant.id}>
-                            <TableCell>{variant.name}</TableCell>
-                            <TableCell>{variant.sku}</TableCell>
-                            <TableCell>{variant.stock}</TableCell>
+                            <TableCell>{variant.name ?? ""}</TableCell>
+                            <TableCell>{variant.sku ?? ""}</TableCell>
+                            <TableCell>{variant.stock ?? ""}</TableCell>
                           </TableRow>
-                        ))}
+                        )) : "No varients for this product"}
                       </TableBody>
                     </Table>
                     <Button className="mt-4">Add Variant</Button>
@@ -779,7 +824,7 @@ export default function Component() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {product.reviews.map((review) => (
+                      {product.reviews ? product.reviews.map((review) => (
                         <div key={review.id} className="bg-muted p-3 rounded-md">
                           <div className="flex justify-between items-center mb-2">
                             <div className="font-semibold">Rating: {review.rating}/5</div>
@@ -787,7 +832,7 @@ export default function Component() {
                           </div>
                           <p>{review.comment}</p>
                         </div>
-                      ))}
+                      )) : "no reveiws found"}
                     </div>
                   </CardContent>
                 </Card>
@@ -822,8 +867,8 @@ export default function Component() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {product.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary">{tag}</Badge>
+                  {product.tags && product.tags.map(({ name }, index) => (
+                    <Badge key={index} variant="secondary">{name}</Badge>
                   ))}
                 </div>
                 <div className="flex space-x-2">

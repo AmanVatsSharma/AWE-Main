@@ -158,3 +158,73 @@ export const GET_STORE_SETTINGS = gql`
     }
   }
 `;
+
+export const GET_ORDER_PAGE_QUERY = gql`
+  query GetOrder($id: Int!) {
+    order(id: $id) {
+      id
+      customer {
+        firstName
+        lastName
+        email
+        phoneNumber
+      }
+      createdAt
+      status
+      orderItems {
+        id
+        product {
+          name
+          variants {
+            sku
+          }
+          stockQuantity
+          price
+        }
+      }
+      total
+      taxRate
+      shippingFees
+      discount
+      total
+      coupon {
+        code
+        discountValue
+      }
+      shippingAddress {
+        address
+        landmark
+        city
+        state
+        pincode
+      }
+      tags {
+        name
+      }
+    }
+  }
+`
+
+export const UPDATE_ORDER_MUTATION = gql`
+  mutation UpdateOrder($id: ID!, $input: UpdateOrderInput!) {
+    updateOrder(id: $id, input: $input) {
+      id
+      status
+      customer {
+        firstName
+        lastName
+        email
+        phoneNumber
+      }
+      orderItems {
+        id
+        product {
+          stockQuantity
+        }
+      }
+      tags {
+        name
+      }
+    }
+  }
+`

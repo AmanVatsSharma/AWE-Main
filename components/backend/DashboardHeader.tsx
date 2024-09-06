@@ -19,17 +19,24 @@ import { SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ModeToggle } from "../ui/modeToggler";
+import Image from "next/image";
 
 function DashboardHeader() {
     return (
         <div className="pl-10 bg-black flex h-[51px] justify-between px-5 items-center fixed top-0 w-full z-20">
 
-            <Typography  variant="h5" p={1} color={"white"}>
+            {/* <Typography  variant="h5" p={1} color={"white"}>
                 Seller Dashboard
-            </Typography>
+            </Typography> */}
+            <Image
+                src={'/logo.png'}
+                width={300}
+                height={300}
+                alt="ProMerchants"
+                className=""
+            />
 
-
-            <div className=" hidden md:flex gap-0 p-0 w-1/2 items-center bg-white rounded-lg">
+            <div className=" hidden md:flex gap-0 p-1 w-1/2 items-center bg-white rounded-lg border">
 
                 <Input
                     placeholder={"Search..."}

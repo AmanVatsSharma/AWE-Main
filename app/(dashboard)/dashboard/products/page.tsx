@@ -75,6 +75,7 @@ import { useQuery } from '@apollo/client'
 import { GetProducts } from '@/ApolloClient/productQueries'
 import { useToast } from '@/components/ui/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useRouter } from 'next/navigation'
 
 interface Product {
   id: string,
@@ -85,11 +86,15 @@ interface Product {
 }
 
 const isFirebaseImage = (url: string) => {
+  if (url = null || "") {
+    return true
+  }
   return url.includes('firebasestorage.googleapis.com');
 };
 
 
 const ProductPage = () => {
+  const router = useRouter()
   const { toast } = useToast()
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(3);
@@ -115,6 +120,10 @@ const ProductPage = () => {
     setPerPage(parseInt(event.target.value, 10)); // Update perPage state
     setPage(1); // Reset to first page
   };
+
+  const handleProductClick = (id: number) => {
+    router.push(`/dashboard/products/${id}`); 
+  }
 
   useEffect(() => {
     if (error) {
@@ -245,7 +254,7 @@ const ProductPage = () => {
                           <Skeleton key={i} className="w-full m-3 rounded-md h-[45px]" />
                         ))
                       }                      {data ? data.products.edges.map(({ node }: any) => (
-                        <TableRow key={node.id}>
+                        <TableRow key={node.id} onClick={() => handleProductClick(node.id)}>
                           <TableCell className="hidden sm:table-cell">
                             {isFirebaseImage(node.imageUrl[0]) ? (
                               <Image
