@@ -1726,13 +1726,23 @@ enum DiscountType {
       },
 
       createCustomer: async (_, { input }) => {
-        const { address, ...customerData } = input;
+        const { address, tags, ...customerData } = input;
+        // Prepare tag data for Prisma
+        const tagsData = tags?.map(tag => ({
+          where: { name: tag.name },
+          create: { name: tag.name },
+        }));
+
+
         return prisma.customer.create({
           data: {
             ...customerData,
             address: { create: address },
+            tags: {
+              connectOrCreate: tagsData,
+            },
           },
-          include: { address: true },
+          include: { address: true, tags: true },
         });
       },
 

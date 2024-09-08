@@ -22,6 +22,7 @@ import { SEARCH_CUSTOMERS, CREATE_CUSTOMER } from '@/ApolloClient/customerQuerie
 import { CREATE_ORDER } from '@/ApolloClient/orderQueries'
 import { Product } from "@prisma/client"
 import { redirect, useRouter } from "next/navigation"
+import CustomerDetailCard from "@/components/backend/CustomerDetailCard"
 
 interface Customer {
   id: string;
@@ -266,17 +267,31 @@ export default function EnhancedOrdersPage() {
 
                     </div>
                   )}
-                  {selectedCustomer && (
+                  {selectedCustomer &&
+                    <CustomerDetailCard customer={selectedCustomer} />
+                  }
+                  {/* {selectedCustomer && (
                     <div className="mt-5 space-y-2 capitalize border rounded-lg p-5 border-gray-200">
                       <div className="text-blue-500 hover:underline cursor-pointer hover:text-blue-600">{selectedCustomer?.firstName} {selectedCustomer?.lastName}</div>
                       <div className="font-bold ">Contact information</div>
                       <div className="text-blue-500 hover:underline cursor-pointer hover:text-blue-600 text-sm lowercase">{selectedCustomer?.email}</div>
                       <div className="text-blue-500 hover:underline text-sm cursor-pointer hover:text-blue-600">{selectedCustomer?.phoneNumber}</div>
-                      {selectedCustomer.address ?
-                        (<div><strong>Address:</strong> {selectedCustomer.address?.city}, {selectedCustomer.address?.state} - {selectedCustomer?.address?.pincode}</div>) : (<div className="font-bold text-sm">No address found!</div>)
-                      }
+                      {selectedCustomer.address && (
+                        (selectedCustomer.address.city === "" &&
+                          selectedCustomer.address.state === "" &&
+                          selectedCustomer.address.pincode === "") ? (
+                          <div className="font-bold text-sm">No address found!</div>
+                        ) : (
+                          <div>
+                            <strong>Address:</strong>
+                            {selectedCustomer.address.city || "No city"},
+                            {selectedCustomer.address.state || "No state"} -
+                            {selectedCustomer.address.pincode || "No pincode"}
+                          </div>
+                        )
+                      )}
                     </div>
-                  )}
+                  )} */}
                 </div>
                 {/* {!selectedCustomer &&
                  } */}

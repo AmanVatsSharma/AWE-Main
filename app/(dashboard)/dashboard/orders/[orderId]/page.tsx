@@ -823,6 +823,7 @@ import {
 import { GET_ORDER_PAGE_QUERY, UPDATE_ORDER_MUTATION } from "@/ApolloClient/orderQueries"
 import { useParams } from "next/navigation"
 import AdvancedLoader from "@/components/common/AdvancedLoader"
+import AdvancedError from "@/components/common/AdvancedError"
 
 
 export default function EnhancedOrderDetailsPage() {
@@ -916,7 +917,7 @@ export default function EnhancedOrderDetailsPage() {
     }
 
     if (loading) return <AdvancedLoader/>
-    if (error) return <p>Error: {error.message}</p>
+    if (error) return <AdvancedError message={error.message ?? "A raandom error occured"}/>
 
     return (
         <div className="container mx-auto py-10">

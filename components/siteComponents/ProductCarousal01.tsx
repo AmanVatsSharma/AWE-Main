@@ -1,7 +1,12 @@
-import React from 'react'
+"use client"
+import React, { useEffect } from 'react'
 import { ProductCard01 } from './ProductCard01'
-import { products } from '@/constants/files';
+// import { products } from '@/constants/files';
 import { Product } from '@/typing';
+import { useQuery } from '@apollo/client'
+import { GET_PRODUCTS_STORE } from '@/ApolloClient/productQueries'
+import { Skeleton } from '../ui/skeleton';
+import AdvancedError from '../common/AdvancedError';
 
 
 
@@ -12,6 +17,19 @@ type Products = {
 }
 
 const ProductCarousal01 = () => {
+    const { loading, error, data } = useQuery(GET_PRODUCTS_STORE, {
+        variables: { perPage: 4, page: 2 },
+    });
+
+    useEffect(() => {
+        console.log(data?.products.edges)
+    }, [data])
+
+    const products = data?.products.edges
+
+    if (error)
+        return <AdvancedError message={error.message} />
+
     return (
         <div>
             <h3 className='font-bold text-lg p-3'>
@@ -20,14 +38,21 @@ const ProductCarousal01 = () => {
             <div
                 className='md:p-3 grid grid-cols-2 md:grid-cols-3 lg:flex'
             >
-                {products.map(item => (
+                {loading &&
+                    Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="w-full m-3 rounded-md h-[300px]" />
+                    ))
+                }
 
-                <ProductCard01
-                key={item.title}
-                    title={item.title}
-                    price={item.price}
-                    mrp={item.mrp}
-                />
+                {data && products.map(({ node }) => (
+
+                    <ProductCard01
+                    imgurl={node.imageUrl[0]}
+                        key={node.id}
+                        title={node.name}
+                        price={node.price}
+                        mrp={node.price}
+                    />
                 ))}
 
 

@@ -211,9 +211,11 @@ import CampaignRoundedIcon from "@mui/icons-material/CampaignRounded";
 import RateReviewRoundedIcon from "@mui/icons-material/RateReviewRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import InventoryIcon from '@mui/icons-material/Inventory';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { Box, Typography } from "@mui/material";
 
 import { Sidebar, SidebarBody, SidebarLink } from '../ui/sidebar';
+import { CalculatorIcon, PlusIcon, SearchIcon, TruckIcon } from "lucide-react";
 
 const sidebarMainListLinks = [
     {
@@ -317,6 +319,33 @@ const sidebarAppsListLinks = [
         href: '/dashboard/home',
         icon: (<RateReviewRoundedIcon fontSize="small" />)
     },
+    {
+        label: 'Shipments',
+        href: '/dashboard/shipments',
+        icon: (<LocalShippingIcon fontSize="small" />),
+        subLinks: [        
+            { 
+                icon: (<PlusIcon/>), 
+                label: 'Create Shipment', 
+                href: '/dashboard/shipments/shipment-management' 
+            },
+            { 
+                icon: (<TruckIcon/>), 
+                label: 'Track Shipment', 
+                href: '#' 
+            },
+            { 
+                icon: (<CalculatorIcon/>), 
+                label: 'Calculate Rates', 
+                href: '/dashboard/shipments/rate-calculation' 
+            },
+            { 
+                icon: (<SearchIcon/>), 
+                label: 'Search Orders', 
+                href: '#' 
+            },
+    ]
+    }
 ]
 
 const DashboardSidebar = () => {

@@ -39,6 +39,12 @@ export const SEARCH_CUSTOMERS = gql`
             state
             pincode
           }
+          notes
+        tags{
+          name
+        }
+        lifetimeValue
+        createdAt
         }
       }
     }
@@ -65,7 +71,7 @@ export const CREATE_CUSTOMER = gql`
     $email: String!,
     $phoneNumber: String!,
     $notes: String,
-    $tags: [TagInput],
+    $tags: [TagInput!],
     $address: AddressInput
   ) {
     createCustomer(
@@ -88,4 +94,30 @@ export const CREATE_CUSTOMER = gql`
 `;
 
 
+export const GET_CUSTOMER_DETAILS_PAGE = gql`
+  query GetCustomer($id: Int!) {
+    customer(id: $id) {
+      id
+      firstName
+      lastName
+      email
+      phoneNumber
+      address {
+        address
+        landmark
+        city
+        state
+        pincode
+        phone
+        company
+      }
+      tags{
+      name
+      }
+      createdAt
+      lifetimeValue
+      acquisitionCost
+    }
+  }
+`;
 

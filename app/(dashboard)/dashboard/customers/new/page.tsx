@@ -465,9 +465,13 @@ interface FormData {
     email: string;
     phoneNumber: string;
     notes: string;
-    tags: string[];
+    tags: TagInput[],
     address: Address;
     country: string;
+}
+
+interface TagInput {
+    name: String
 }
 
 const countries = [
@@ -502,14 +506,14 @@ const CustomerNewPage = (props: Props) => {
         },
     });
 
-    const [tags, setTags] = useState<string[]>(formData.tags);
+    const [tags, setTags] = useState<TagInput[]>([]);
 
     useEffect(() => {
         setFormData(prevState => ({
             ...prevState,
             tags,
         }));
-    }, [tags]); // Only update formData when tags change
+    }, [tags]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -538,11 +542,20 @@ const CustomerNewPage = (props: Props) => {
     };
 
     const handleTagsChange = (newTags: string[]) => {
-        setTags(newTags);
-        setFormData(prevState => ({
-            ...prevState,
-            tags: newTags,
-        }));
+
+        const formattedTags = newTags
+            .filter(tag => tag && typeof tag === 'string' && tag.trim() !== '')
+            .map(tag => ({ name: tag.trim() }));
+
+        setTags(prevTags => {
+            const combinedTags = [...prevTags, ...formattedTags];
+            // Filter out any objects with undefined or empty name
+            const filteredTags = combinedTags.filter(tag => tag.name && tag.name !== '');
+            const uniqueTags = Array.from(new Set(filteredTags.map(tag => tag.name)))
+                .map(name => ({ name }));
+
+            return uniqueTags;
+        });
     };
 
     const handleSubmit = async (event: React.FormEvent) => {

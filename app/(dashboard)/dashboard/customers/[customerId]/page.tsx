@@ -381,6 +381,11 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import AdvancedLoader from '@/components/common/AdvancedLoader'
+import AdvancedError from '@/components/common/AdvancedError'
+import { useQuery } from '@apollo/client'
+import { GET_CUSTOMER_DETAILS_PAGE } from '@/ApolloClient'
+import { useParams } from 'next/navigation'
+import CustomerTenure from '@/components/common/CustomerTenure'
 
 // Sample data to use when no GraphQL data is available
 const sampleCustomerData = {
@@ -423,16 +428,17 @@ const purchaseHistory = [
 ]
 
 export default function Component() {
+    const params = useParams()
     const [notes, setNotes] = useState([
         { id: 1, content: "Customer prefers email communication", date: "2023-08-30" },
         { id: 2, content: "Interested in new product line", date: "2023-08-29" },
     ])
     const [newNote, setNewNote] = useState("")
+    const customerId = Array.isArray(params?.customerId) ? parseInt(params.customerId[0]) : parseInt(params?.customerId);
 
-    // Simulating data loading
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
-    const [data, setData] = useState({ customer: sampleCustomerData })
+    const { loading, error, data: customersData } = useQuery(GET_CUSTOMER_DETAILS_PAGE, {
+        variables: { id: customerId },
+    });
 
     const addNote = () => {
         if (newNote.trim()) {
@@ -441,10 +447,10 @@ export default function Component() {
         }
     }
 
-    if (loading) return <AdvancedLoader/>
-    if (error) return <p>Error: {error.message}</p>
+    if (loading) return <AdvancedLoader />
+    if (error) return <AdvancedError message={error?.message ?? "random error occured!"} />
 
-    const customer = data?.customer || sampleCustomerData
+    const customer = customersData?.customer || sampleCustomerData
 
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -478,8 +484,13 @@ export default function Component() {
                             <AvatarFallback>{customer.firstName}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <h1 className="text-2xl font-bold">{customer.firstName} {customer.lastName}</h1>
-                            <p className="text-sm text-muted-foreground">{customer.address?.city}, {customer.address?.state} • Customer for 9 months</p>
+                            <h1 className="text-2xl font-bold capitalize">{customer.firstName} {customer.lastName}</h1>
+                            <p className="text-sm text-muted-foreground">{customer.address.city === "" && customer.address.state === "" ? (
+                                "No address found"
+                            ) : (
+                                `${customer.address.city === "" ? "No city" : customer.address.city}, ${customer.address.state === "" ? "No state" : customer.address.state}`
+                            )}
+                                •<CustomerTenure createdAt={customer.createdAt} /></p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -514,7 +525,7 @@ export default function Component() {
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold mb-2">Address</h3>
-                                                <p>{customer.firstName} {customer.lastName}</p>
+                                                <p className='capitalize'>{customer.firstName} {customer.lastName}</p>
                                                 <p>{customer.address?.address}, {customer.address?.landmark}</p>
                                                 <p>{customer.address?.city} {customer.address?.pincode}</p>
                                                 <p>{customer.address?.state}</p>
@@ -529,7 +540,7 @@ export default function Component() {
                                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${customer.lifetimeValue.toFixed(2)}</div>
+                                            <div className="text-2xl font-bold">${customer.lifetimeValue ? customer.lifetimeValue.toFixed(2) : "null"}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -538,7 +549,7 @@ export default function Component() {
                                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${customer.average_order_value.toFixed(2)}</div>
+                                            <div className="text-2xl font-bold">${customer.average_order_value ? customer.average_order_value.toFixed(2) : "null"}</div>
                                         </CardContent>
                                     </Card>
                                     <Card>
@@ -565,9 +576,9 @@ export default function Component() {
                                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent>
-                                            <div className="text-2xl font-bold">${customer.average_order_value.toFixed(2)}</div>
+                                            <div className="text-2xl font-bold">${customer.average_order_value ? customer.average_order_value.toFixed(2) : "null"}</div>
                                         </CardContent>
-                                        </Card>
+                                    </Card>
                                 </div>
                             </TabsContent>
                             <TabsContent value="orders">
@@ -581,18 +592,20 @@ export default function Component() {
                                                 <thead>
                                                     <tr>
                                                         <th className="text-left">Order ID</th>
+                                                        <th className="text-left">Status</th>
                                                         <th className="text-left">Date</th>
                                                         <th className="text-left">Total</th>
-                                                        <th className="text-left">Status</th>
+                                                        <th className="text-left">Items</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {customer.orders.map((order) => (
                                                         <tr key={order.id}>
                                                             <td>{order.id}</td>
-                                                            <td>{new Date(order.date).toLocaleDateString()}</td>
-                                                            <td>${order.total.toFixed(2)}</td>
                                                             <td>{order.status}</td>
+                                                            <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                                                            <td>${order.total.toFixed(2)}</td>
+                                                            <td>{order.orderItems?.product?.name}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -702,6 +715,9 @@ export default function Component() {
                                 <div className="flex flex-wrap gap-2">
                                     <Badge>VIP</Badge>
                                     <Badge>Loyal</Badge>
+                                    {customer.tags && customer.tags.length > 0 && customer.tags.map((tag, index) => (
+                                        <Badge key={index}>{tag.name}</Badge>
+                                    ))}
                                     <Badge variant="outline">
                                         <Plus className="h-3 w-3 mr-1" />
                                         Add tag

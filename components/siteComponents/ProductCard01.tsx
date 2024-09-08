@@ -18,15 +18,15 @@ export function ProductCard01({title, price, imgurl, mrp}: ProductProps) {
       <div className="grid gap-4 p-4">
         <div className="aspect-[4/5] w-full overflow-hidden rounded-xl">
           <Image
-            src="/placeholder.svg"
+            src={imgurl ?? "/placeholder.svg"}
             alt="Product image"
-            width="400"
-            height="500"
+            width="300"
+            height="400"
             className="aspect-[4/5] object-cover border w-full"
           />
         </div>
         <div className="grid gap-1.5">
-          <h3 className="font-semibold text-sm md:text-base">{title || 'Acme Circles T-Shirt'}</h3>
+          <h3 className="font-semibold text-sm md:text-base capitalize">{title || 'Acme Circles T-Shirt'}</h3>
           <p className="font-semibold text-sm md:text-base">
             ${price?.toString() || '99'} <span className="line-through ml-2 opacity-45 font-bold">${mrp?.toString() || '199'}</span>
             </p>

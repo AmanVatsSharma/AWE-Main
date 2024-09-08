@@ -128,3 +128,21 @@ export const GET_PRODUCT = gql`
     }
   }
 `;
+
+export const GET_PRODUCTS_STORE = gql`
+  query GetProducts($perPage: Int!, $page: Int!) {
+    products(perPage: $perPage, page: $page) {
+      edges {
+        node {
+          id
+          name
+          description
+          price
+          imageUrl
+          stockQuantity
+        }
+      }
+      totalCount
+    }
+  }
+`;

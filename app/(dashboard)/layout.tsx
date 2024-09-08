@@ -27,7 +27,6 @@
 
 
 'use client'
-
 import { ApolloProvider } from "@apollo/client";
 import client from "@/ApolloClient/apolloClient";
 import DashboardHeader from "@/components/backend/DashboardHeader"

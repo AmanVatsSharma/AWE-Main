@@ -1,7 +1,7 @@
 import React, { useState, KeyboardEvent, useEffect } from 'react';
 
 interface TagsInputProps {
-    tags: string[];
+    tags: [];
     setTags: React.Dispatch<React.SetStateAction<string[]>>;
     onTagsChange: (newTags: string[]) => void;
 
@@ -44,14 +44,20 @@ const TagsInput: React.FC<TagsInputProps> = ({ tags, setTags, onTagsChange }) =>
                         key={index}
                         className="bg-gray-200 text-gray-800 px-2 py-1 rounded-md flex items-center"
                     >
-                        {tag}
-                        <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="ml-2 text-gray-800 hover:text-red-700"
-                        >
-                            &times;
-                        </button>
+                        {tag?.name ? (
+                            <>
+                                {tag.name}
+                                <button
+                                    type="button"
+                                    onClick={() => removeTag(tag)}
+                                    className="ml-2 text-gray-800 hover:text-red-700"
+                                >
+                                    &times;
+                                </button>
+                            </>
+                        ) : (
+                            <span>Invalid tag</span>
+                        )}
                     </span>
                 ))}
             </div>

@@ -1,7 +1,10 @@
+"use client"
 import React from 'react'
 import Header from "@/components/header/Header";
 import { IconHome, IconMessage, IconUser } from "@tabler/icons-react";
 import { FloatingNav } from "@/components/ui/floating-navbar";
+import { ApolloProvider } from '@apollo/client';
+import client from '@/ApolloClient/apolloClient';
 
 type Props = {}
 
@@ -32,11 +35,12 @@ export default function RootLayout({
 }>) {
     return (
         <div>
+            <ApolloProvider client={client}>
 
-            <Header />
-            <FloatingNav navItems={navItems} />
-            {children}
-
+                <Header />
+                <FloatingNav navItems={navItems} />
+                {children}
+            </ApolloProvider>
         </div>
     )
 }

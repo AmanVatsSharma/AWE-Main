@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
-        domains: ["aceternity.com", "firebasestorage.googleapis.com"], // Add the external domain here
+        domains: ["aceternity.com", "firebasestorage.googleapis.com", "img.freepik.com"], // Add the external domain here
     },
     typescript: {
         ignoreBuildErrors: true,
