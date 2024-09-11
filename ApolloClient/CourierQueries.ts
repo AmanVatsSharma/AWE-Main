@@ -101,3 +101,65 @@ export const GET_COURIERS = gql`
     }
   }
 `
+
+export const GET_SHIPMENT_TRACKING = gql`
+  query GetShipmentTracking($trackingNumber: String!) {
+    shipmentTracking(trackingNumber: $trackingNumber) {
+      id
+      trackingNumber
+      status
+      estimatedDelivery
+      weight
+      dimensions {
+        length
+        width
+        height
+      }
+      trackingHistory {
+        status
+        location
+        latitude
+        longitude
+        timestamp
+      }
+      deliveryPreferences {
+        signature
+        safeDropOff
+        holdAtLocation
+      }
+    }
+  }
+`
+
+export const SHIPMENT_UPDATED_SUBSCRIPTION = gql`
+  subscription ShipmentUpdated($trackingNumber: String!) {
+    shipmentUpdated(trackingNumber: $trackingNumber) {
+      id
+      trackingNumber
+      status
+      estimatedDelivery
+    }
+  }
+`
+
+export const GENERATE_TRACKING_PAGE = gql`
+  mutation GenerateTrackingPage($trackingNumber: String!, $customizations: TrackingPageCustomizationsInput!) {
+    generateTrackingPage(trackingNumber: $trackingNumber, customizations: $customizations) {
+      url
+    }
+  }
+`
+
+export const UPDATE_DELIVERY_PREFERENCES = gql`
+  mutation UpdateDeliveryPreferences($trackingNumber: String!, $preferences: DeliveryPreferencesInput!) {
+    updateDeliveryPreferences(trackingNumber: $trackingNumber, preferences: $preferences) {
+      id
+      trackingNumber
+      deliveryPreferences {
+        signature
+        safeDropOff
+        holdAtLocation
+      }
+    }
+  }
+`

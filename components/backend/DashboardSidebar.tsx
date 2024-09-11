@@ -332,7 +332,7 @@ const sidebarAppsListLinks = [
             { 
                 icon: (<TruckIcon/>), 
                 label: 'Track Shipment', 
-                href: '#' 
+                href: '/dashboard/shipments/track-shipments' 
             },
             { 
                 icon: (<CalculatorIcon/>), 
