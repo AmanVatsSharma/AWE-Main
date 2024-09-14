@@ -215,7 +215,8 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { Box, Typography } from "@mui/material";
 
 import { Sidebar, SidebarBody, SidebarLink } from '../ui/sidebar';
-import { CalculatorIcon, PlusIcon, SearchIcon, TruckIcon } from "lucide-react";
+import { CalculatorIcon, PlusIcon, SearchIcon, TruckIcon, ChartPie, FilePieChartIcon } from "lucide-react";
+import { IconInvoice } from "@tabler/icons-react";
 
 const sidebarMainListLinks = [
     {
@@ -342,7 +343,17 @@ const sidebarAppsListLinks = [
             { 
                 icon: (<SearchIcon/>), 
                 label: 'Search Orders', 
-                href: '#' 
+                href: '/dashboard/shipments/order-management' 
+            },
+            { 
+                icon: (<FilePieChartIcon/>), 
+                label: 'Analytics', 
+                href: '/dashboard/shipments/reports-and-analytics' 
+            },
+            { 
+                icon: (<IconInvoice/>), 
+                label: 'Billings', 
+                href: '/dashboard/shipments/billings' 
             },
     ]
     }

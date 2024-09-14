@@ -820,10 +820,15 @@ import {
     Paperclip,
     Loader2,
 } from "lucide-react"
-import { GET_ORDER_PAGE_QUERY, UPDATE_ORDER_MUTATION } from "@/ApolloClient/orderQueries"
+import { GET_ORDER_PAGE_QUERY, UPDATE_ORDER_MUTATION, UPDATE_ORDER_STATUS } from "@/ApolloClient/orderQueries"
 import { useParams } from "next/navigation"
 import AdvancedLoader from "@/components/common/AdvancedLoader"
 import AdvancedError from "@/components/common/AdvancedError"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import Link from "next/link"
+import Image from "next/image"
+import { toast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
 
 
 export default function EnhancedOrderDetailsPage() {
@@ -840,7 +845,7 @@ export default function EnhancedOrderDetailsPage() {
         variables: { id: orderId },
     })
 
-    const [updateOrder] = useMutation(UPDATE_ORDER_MUTATION)
+    const [updateOrder] = useMutation(UPDATE_ORDER_STATUS)
 
 
     const order = data?.order
@@ -852,27 +857,39 @@ export default function EnhancedOrderDetailsPage() {
 
     const handleSave = async () => {
         try {
+            // await updateOrder({
+            //     variables: {
+            //         id: order.id,
+            //         input: {
+            //             status: editedOrder.status,
+            //             customer: {
+            //                 firstName: editedOrder.customer.firstName,
+            //                 lastName: editedOrder.customer.lastName,
+            //                 email: editedOrder.customer.email,
+            //                 phoneNumber: editedOrder.customer.phoneNumber,
+            //             },
+            //             orderItems: editedOrder.orderItems.map(item => ({
+            //                 id: item.id,
+            //                 product: {
+            //                     stockQuantity: item.product.stockQuantity,
+            //                 },
+            //             })),
+            //             tags: editedOrder.tags.map(tag => ({ name: tag.name })),
+            //         },
+            //     },
+            // })
             await updateOrder({
                 variables: {
                     id: order.id,
-                    input: {
-                        status: editedOrder.status,
-                        customer: {
-                            firstName: editedOrder.customer.firstName,
-                            lastName: editedOrder.customer.lastName,
-                            email: editedOrder.customer.email,
-                            phoneNumber: editedOrder.customer.phoneNumber,
-                        },
-                        orderItems: editedOrder.orderItems.map(item => ({
-                            id: item.id,
-                            product: {
-                                stockQuantity: item.product.stockQuantity,
-                            },
-                        })),
-                        tags: editedOrder.tags.map(tag => ({ name: tag.name })),
-                    },
+                    status: editedOrder.status ?? "PROCESSING",
                 },
-            })
+            },)
+            if (data) {
+                toast({
+                    title: `Status Updated Sucessully!`,
+                    variant: "success"
+                })
+            }
             setIsEditing(false)
         } catch (error) {
             console.error("Error updating order:", error)
@@ -916,337 +933,378 @@ export default function EnhancedOrderDetailsPage() {
         })
     }
 
-    if (loading) return <AdvancedLoader/>
-    if (error) return <AdvancedError message={error.message ?? "A raandom error occured"}/>
+    if (loading) return <AdvancedLoader />
+    if (error) return <AdvancedError message={error.message ?? "A raandom error occured"} />
 
     return (
-        <div className="container mx-auto py-10">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                <div>
-                    <h1 className="text-3xl font-bold">Order {order.id}</h1>
-                    <p className="text-sm text-muted-foreground">Placed on {format(new Date(order.createdAt), "MMMM d, yyyy 'at' h:mm a")}</p>
-                </div>
-                <div className="flex items-center space-x-2 mt-4 md:mt-0">
-                    {isEditing ? (
-                        <>
-                            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-                                <Check className="mr-2 h-4 w-4" /> Save Changes
-                            </Button>
-                            <Button onClick={handleCancel} variant="outline">
-                                <X className="mr-2 h-4 w-4" /> Cancel
-                            </Button>
-                        </>
-                    ) : (
-                        <Button onClick={handleEdit}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Order
-                        </Button>
-                    )}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline">
-                                More Actions <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                                <Send className="mr-2 h-4 w-4" /> Send Invoice
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <RefreshCw className="mr-2 h-4 w-4" /> Refund Order
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowSplitOrderDialog(true)}>
-                                <ArrowUpDown className="mr-2 h-4 w-4" /> Split Order
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
-                                <AlertCircle className="mr-2 h-4 w-4" /> Cancel Order
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
+        <div className="flex min-h-screen w-full flex-col bg-muted/40">
+            <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+                <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-3 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                    <Breadcrumb className="hidden md:flex">
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbLink asChild>
+                                    <Link href="/dashboard/">Dashboard</Link>
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbLink asChild>
+                                    <Link href="/dashboard/orders">Orders</Link>
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>Order #{orderId}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                </header>
+                <main className="pr-8">
 
-            <div className="grid gap-6 md:grid-cols-3">
-                <div className="md:col-span-2">
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList>
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="items">Items</TabsTrigger>
-                            <TabsTrigger value="customer">Customer</TabsTrigger>
-                            <TabsTrigger value="financials">Financials</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="overview">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Order Overview</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-4">
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-medium">Status:</span>
-                                            {isEditing ? (
-                                                <Select
-                                                    value={editedOrder.status}
-                                                    onValueChange={handleStatusChange}
-                                                >
-                                                    <SelectTrigger className="w-[180px]">
-                                                        <SelectValue placeholder="Select status" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Processing">Processing</SelectItem>
-                                                        <SelectItem value="Shipped">Shipped</SelectItem>
-                                                        <SelectItem value="Delivered">Delivered</SelectItem>
-                                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            ) : (
-                                                <Badge>{order.status}</Badge>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="font-medium">Payment Method:</span>
-                                            <span>{order.paymentMethod}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="font-medium">Subtotal:</span>
-                                            <span>${order.subtotal?.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="font-medium">Tax:</span>
-                                            <span>${order.tax?.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="font-medium">Shipping:</span>
-                                            <span>${order.shippingFees.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="font-medium">Discount:</span>
-                                            <span>-${order.discount.toFixed(2)}</span>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex justify-between font-bold">
-                                            <span>Total:</span>
-                                            <span>${order.total.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                        <TabsContent value="items">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Order Items</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Product</TableHead>
-                                                <TableHead>SKU</TableHead>
-                                                <TableHead className="text-right">Quantity</TableHead>
-                                                <TableHead className="text-right">Price</TableHead>
-                                                <TableHead className="text-right">Total</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {(isEditing ? editedOrder.orderItems : order.orderItems).map((item) => (
-                                                <TableRow key={item.id}>
-                                                    <TableCell>{item.product.name}</TableCell>
-                                                    <TableCell>{item.product.variants?.sku}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {isEditing ? (
-                                                            <Input
-                                                                type="number"
-                                                                value={item.product.stockQuantity}
-                                                                onChange={(e) => handleItemQuantityChange(item.id, e.target.value)}
-                                                                className="w-20 text-right"
-                                                            />
-                                                        ) : (
-                                                            item.product.stockQuantity
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">${item.product.price.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">${(item.product.stockQuantity * item.product.price).toFixed(2)}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                        <TabsContent value="customer">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Customer Information</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Label htmlFor="customer-firstName">First Name</Label>
-                                            <Label htmlFor="customer-lastName">Last Name</Label>
-                                            <Input
-                                                id="customer-firstName"
-                                                value={isEditing ? editedOrder.customer.firstName : order.customer.firstName}
-                                                onChange={(e) => handleInputChange(e, 'customer.firstName')}
-                                                disabled={!isEditing}
-                                            />
-                                            <Input
-                                                id="customer-lastName"
-                                                value={isEditing ? editedOrder.customer.lastName : order.customer.lastName}
-                                                onChange={(e) => handleInputChange(e, 'customer.lastName')}
-                                                disabled={!isEditing}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="customer-email">Email</Label>
-                                            <Input
-                                                id="customer-email"
-                                                value={isEditing ? editedOrder.customer.email : order.customer.email}
-                                                onChange={(e) => handleInputChange(e, 'customer.email')}
-                                                disabled={!isEditing}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="customer-phone">Phone</Label>
-                                            <Input
-                                                id="customer-phone"
-                                                value={isEditing ? editedOrder.customer.phoneNumber : order.customer.phoneNumber}
-                                                onChange={(e) => handleInputChange(e, 'customer.phoneNumber')}
-                                                disabled={!isEditing}
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                        <TabsContent value="financials">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Financial Breakdown</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between">
-                                            <span>Subtotal:</span>
-                                            <span>${order.subtotal?.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Tax:</span>
-                                            <span>${order.tax?.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Shipping:</span>
-                                            <span>${order.shippingFees.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Discount:</span>
-                                            <span>-${order.discount?.toFixed(2)}</span>
-                                        </div>
-                                        {order.coupon && (
-                                            <div className="flex justify-between">
-                                                <span>Coupon ({order.coupon?.code}):</span>
-                                                <span>-${order.coupon?.discountValue?.toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                        <Separator />
-                                        <div className="flex justify-between font-bold">
-                                            <span>Total:</span>
-                                            <span>${order.total.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-                </div>
-
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Shipping Address</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {order.shippingAddress ?
-                                <div className="space-y-2">
-                                    <p>{order.shippingAddress?.address}</p>
-                                    <p>{order.shippingAddress?.landmark}</p>
-                                    <p>{order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.pincode}</p>
-                                </div>
-                                : "no shipping address"
-                            }
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Tags</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {order.tags ?
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold">Order {order.id}</h1>
+                            <p className="text-sm text-muted-foreground">Placed on {format(new Date(order.createdAt), "MMMM d, yyyy 'at' h:mm a")}</p>
+                        </div>
+                        <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                            {isEditing ? (
                                 <>
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                        {(isEditing ? editedOrder.tags : order.tags).map((tag) => (
-                                            <Badge key={tag.name} variant="secondary">
-                                                {tag.name}
-                                                {isEditing && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="ml-2 h-4 w-4 p-0"
-                                                        onClick={() => handleRemoveTag(tag.name)}
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
-                                                )}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                    {isEditing && (
-                                        <div className="flex gap-2">
-                                            <Input
-                                                placeholder="Add new tag"
-                                                value={newTag}
-                                                onChange={(e) => setNewTag(e.target.value)}
-                                            />
-                                            <Button onClick={handleAddTag}>Add</Button>
-                                        </div>
-                                    )}
+                                    <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+                                        <Check className="mr-2 h-4 w-4" /> Save Changes
+                                    </Button>
+                                    <Button onClick={handleCancel} variant="outline">
+                                        <X className="mr-2 h-4 w-4" /> Cancel
+                                    </Button>
                                 </>
-                                : "no tags"}
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-
-            <Dialog open={showSplitOrderDialog} onOpenChange={setShowSplitOrderDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Split Order</DialogTitle>
-                        <DialogDescription>
-                            Specify the quantities for each item to split into a new order.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        {order.orderItems.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between">
-                                <span>{item.product.name}</span>
-                                <Input
-                                    type="number"
-                                    placeholder="Quantity"
-                                    className="w-24"
-                                    min="0"
-                                    max={item.product.stockQuantity}
-                                    onChange={(e) => setSplitQuantities({ ...splitQuantities, [item.id]: e.target.value })}
-                                />
-                            </div>
-                        ))}
+                            ) : (
+                                <Button onClick={handleEdit}>
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Order
+                                </Button>
+                            )}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        More Actions <ChevronDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                        <Send className="mr-2 h-4 w-4" /> Send Invoice
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>
+                                        <RefreshCw className="mr-2 h-4 w-4" /> Refund Order
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setShowSplitOrderDialog(true)}>
+                                        <ArrowUpDown className="mr-2 h-4 w-4" /> Split Order
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-red-600">
+                                        <AlertCircle className="mr-2 h-4 w-4" /> Cancel Order
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
-                    <DialogFooter>
-                        <Button onClick={() => setShowSplitOrderDialog(false)} variant="outline">Cancel</Button>
-                        <Button onClick={() => {/* Implement split order logic */ }}>Split Order</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+
+                    <div className="grid gap-6 md:grid-cols-3">
+                        <div className="md:col-span-2">
+                            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                                <TabsList>
+                                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                                    <TabsTrigger value="items">Items</TabsTrigger>
+                                    <TabsTrigger value="customer">Customer</TabsTrigger>
+                                    <TabsTrigger value="financials">Financials</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="overview">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Order Overview</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid gap-4">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-medium">Status:</span>
+                                                    {isEditing ? (
+                                                        <Select
+                                                            value={editedOrder.status}
+                                                            onValueChange={handleStatusChange}
+                                                        >
+                                                            <SelectTrigger className="w-[180px]">
+                                                                <SelectValue placeholder="Select status" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="PENDING">Pending</SelectItem>
+                                                                <SelectItem value="PROCESSING">Processing</SelectItem>
+                                                                <SelectItem value="SHIPPED">Shipped</SelectItem>
+                                                                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                                                                <SelectItem value="CANCELED">Cancelled</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <Badge className={cn('p-2  rounded-sm', 
+                                                            order.status === 'DELIVERED' && 'bg-green-600',
+                                                            order.status === 'CANCELED' && 'bg-red-600',
+                                                            order.status === 'SHIPPED' && 'bg-orange-600',
+                                                            order.status === 'PROCESSING' && 'bg-blue-600'
+                                                        )} >{order.status}</Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-medium">Payment Method:</span>
+                                                    <span>{order.paymentMethod}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-medium">Subtotal:</span>
+                                                    <span>${order.subtotal?.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-medium">Tax:</span>
+                                                    <span>${order.tax?.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-medium">Shipping:</span>
+                                                    <span>${order.shippingFees.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="font-medium">Discount:</span>
+                                                    <span>-${order.discount.toFixed(2)}</span>
+                                                </div>
+                                                <Separator />
+                                                <div className="flex justify-between font-bold">
+                                                    <span>Total:</span>
+                                                    <span>${order.total.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                                <TabsContent value="items">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Order Items</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Product</TableHead>
+                                                        <TableHead>SKU</TableHead>
+                                                        <TableHead className="text-right">Quantity</TableHead>
+                                                        <TableHead className="text-right">Price</TableHead>
+                                                        <TableHead className="text-right">Total</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {(isEditing ? editedOrder.orderItems : order.orderItems).map((item) => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell className="flex gap-3 items-center capitalize">
+                                                                <Image
+                                                                    alt={item.product.name}
+                                                                    src={item.product?.imageUrl[0]}
+                                                                    width={50}
+                                                                    height={50}
+                                                                    className=""
+                                                                />
+                                                                {item.product.name}
+                                                            </TableCell>
+                                                            <TableCell>{item.product.variants?.sku}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                {isEditing ? (
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={item.product.stockQuantity}
+                                                                        onChange={(e) => handleItemQuantityChange(item.id, e.target.value)}
+                                                                        className="w-20 text-right"
+                                                                    />
+                                                                ) : (
+                                                                    item.product.stockQuantity
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">${item.product.price.toFixed(2)}</TableCell>
+                                                            <TableCell className="text-right">${(item.product.stockQuantity * item.product.price).toFixed(2)}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                                <TabsContent value="customer">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Customer Information</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <Label htmlFor="customer-firstName">First Name</Label>
+                                                    <Label htmlFor="customer-lastName">Last Name</Label>
+                                                    <Input
+                                                        id="customer-firstName"
+                                                        value={isEditing ? editedOrder.customer.firstName : order.customer.firstName}
+                                                        onChange={(e) => handleInputChange(e, 'customer.firstName')}
+                                                        disabled={!isEditing}
+                                                    />
+                                                    <Input
+                                                        id="customer-lastName"
+                                                        value={isEditing ? editedOrder.customer.lastName : order.customer.lastName}
+                                                        onChange={(e) => handleInputChange(e, 'customer.lastName')}
+                                                        disabled={!isEditing}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="customer-email">Email</Label>
+                                                    <Input
+                                                        id="customer-email"
+                                                        value={isEditing ? editedOrder.customer.email : order.customer.email}
+                                                        onChange={(e) => handleInputChange(e, 'customer.email')}
+                                                        disabled={!isEditing}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="customer-phone">Phone</Label>
+                                                    <Input
+                                                        id="customer-phone"
+                                                        value={isEditing ? editedOrder.customer.phoneNumber : order.customer.phoneNumber}
+                                                        onChange={(e) => handleInputChange(e, 'customer.phoneNumber')}
+                                                        disabled={!isEditing}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                                <TabsContent value="financials">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Financial Breakdown</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                <div className="flex justify-between">
+                                                    <span>Subtotal:</span>
+                                                    <span>${order.subtotal?.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Tax:</span>
+                                                    <span>${order.tax?.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Shipping:</span>
+                                                    <span>${order.shippingFees.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Discount:</span>
+                                                    <span>-${order.discount?.toFixed(2)}</span>
+                                                </div>
+                                                {order.coupon && (
+                                                    <div className="flex justify-between">
+                                                        <span>Coupon ({order.coupon?.code}):</span>
+                                                        <span>-${order.coupon?.discountValue?.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <Separator />
+                                                <div className="flex justify-between font-bold">
+                                                    <span>Total:</span>
+                                                    <span>${order.total.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                            </Tabs>
+                        </div>
+
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Shipping Address</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {order.shippingAddress ?
+                                        <div className="space-y-2">
+                                            <p>{order.shippingAddress?.address}</p>
+                                            <p>{order.shippingAddress?.landmark}</p>
+                                            <p>{order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.pincode}</p>
+                                        </div>
+                                        : "no shipping address"
+                                    }
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Tags</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {order.tags ?
+                                        <>
+                                            <div className="flex flex-wrap gap-2 mb-4">
+                                                {(isEditing ? editedOrder.tags : order.tags).map((tag) => (
+                                                    <Badge key={tag.name} variant="secondary">
+                                                        {tag.name}
+                                                        {isEditing && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="ml-2 h-4 w-4 p-0"
+                                                                onClick={() => handleRemoveTag(tag.name)}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                            {isEditing && (
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        placeholder="Add new tag"
+                                                        value={newTag}
+                                                        onChange={(e) => setNewTag(e.target.value)}
+                                                    />
+                                                    <Button onClick={handleAddTag}>Add</Button>
+                                                </div>
+                                            )}
+                                        </>
+                                        : "no tags"}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+
+                    <Dialog open={showSplitOrderDialog} onOpenChange={setShowSplitOrderDialog}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Split Order</DialogTitle>
+                                <DialogDescription>
+                                    Specify the quantities for each item to split into a new order.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                {order.orderItems.map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between">
+                                        <span>{item.product.name}</span>
+                                        <Input
+                                            type="number"
+                                            placeholder="Quantity"
+                                            className="w-24"
+                                            min="0"
+                                            max={item.product.stockQuantity}
+                                            onChange={(e) => setSplitQuantities({ ...splitQuantities, [item.id]: e.target.value })}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={() => setShowSplitOrderDialog(false)} variant="outline">Cancel</Button>
+                                <Button onClick={() => {/* Implement split order logic */ }}>Split Order</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </main>
+            </div>
         </div>
     )
 }

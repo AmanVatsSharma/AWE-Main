@@ -100,6 +100,8 @@ const Page = (props: Props) => {
 
     const { loading: orderDetailsLoading, error: orderDetailsError, data: orderDetailsData, refetch } = useQuery(GET_ORDER_DETAILS, { variables: { id: selectedOrder }, skip: !selectedOrder, });
 
+    const finalDate = new Date(ordersData?.orders.edges.node?.createdAt) || null
+
     const handleClick = (id: number) => { setSelectedOrder(id) }
 
     // if (ordersLoading) return <p>Loading...</p>;
@@ -438,7 +440,11 @@ const Page = (props: Props) => {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem>
+                                                        <Link href={`/dashboard/orders/${orderDetailsData.order.id}`}>
+                                                            Edit
+                                                        </Link>
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem>Export</DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem>Trash</DropdownMenuItem>
@@ -475,33 +481,33 @@ const Page = (props: Props) => {
                                     </ul>
                                     <Separator className="my-2" />
                                     <ul className="grid gap-3">
-                                            <li className="flex items-center justify-between">
-                                                <span className="text-muted-foreground">Subtotal</span>
-                                                <span>$      {orderDetailsData ? orderDetailsData.order.orderItems.reduce(
+                                        <li className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">Subtotal</span>
+                                            <span>$      {orderDetailsData ? orderDetailsData.order.orderItems.reduce(
+                                                (subtotal: number, item: any) => subtotal + item.price * item.quantity,
+                                                0 // Initial value of subtotal
+                                            ).toFixed(2) : ' ---'}
+                                            </span>
+                                        </li>
+                                        <li className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">Shipping</span>
+                                            <span>${orderDetailsData ? orderDetailsData.order.shippingFees : '---'}</span>
+                                        </li>
+                                        <li className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">{`Tax (${orderDetailsData ? orderDetailsData.order.taxRate : 'TaxPercentage'}%)`}</span>
+                                            <span>$      {orderDetailsData ? (
+                                                orderDetailsData.order.orderItems.reduce(
                                                     (subtotal: number, item: any) => subtotal + item.price * item.quantity,
-                                                    0 // Initial value of subtotal
-                                                ).toFixed(2) : ' ---'}
-                                                </span>
-                                            </li>
-                                            <li className="flex items-center justify-between">
-                                                <span className="text-muted-foreground">Shipping</span>
-                                                <span>${orderDetailsData ? orderDetailsData.order.shippingFees : '---'}</span>
-                                            </li>
-                                            <li className="flex items-center justify-between">
-                                                <span className="text-muted-foreground">{`Tax (${orderDetailsData ? orderDetailsData.order.taxRate : 'TaxPercentage'}%)`}</span>
-                                                <span>$      {orderDetailsData ? (
-                                                    orderDetailsData.order.orderItems.reduce(
-                                                        (subtotal: number, item: any) => subtotal + item.price * item.quantity,
-                                                        0
-                                                    ) *
-                                                    (orderDetailsData.order.taxRate / 100)
-                                                ).toFixed(2): '---'}
-                                                </span>
-                                            </li>
-                                            <li className="flex items-center justify-between font-semibold">
-                                                <span className="text-muted-foreground">Total</span>
-                                                <span>${orderDetailsData ? orderDetailsData.order.total : '---'}</span>
-                                            </li>
+                                                    0
+                                                ) *
+                                                (orderDetailsData.order.taxRate / 100)
+                                            ).toFixed(2) : '---'}
+                                            </span>
+                                        </li>
+                                        <li className="flex items-center justify-between font-semibold">
+                                            <span className="text-muted-foreground">Total</span>
+                                            <span>${orderDetailsData ? orderDetailsData.order.total : '---'}</span>
+                                        </li>
                                     </ul>
                                 </div>
                                 <Separator className="my-4" />

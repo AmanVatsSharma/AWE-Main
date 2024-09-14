@@ -115,7 +115,7 @@ export default function ShipmentManagement() {
                                 <ShipmentList
                                     shipments={data?.shipments || []}
                                     loading={loading}
-                                    error={error}
+                                    // error={error}
                                     onSelectShipment={(id) => {
                                         setSelectedShipmentId(id)
                                         setSelectedTab(3)

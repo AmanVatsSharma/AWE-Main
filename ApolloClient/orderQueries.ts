@@ -175,6 +175,7 @@ export const GET_ORDER_PAGE_QUERY = gql`
         id
         product {
           name
+          imageUrl
           variants {
             sku
           }
@@ -204,6 +205,15 @@ export const GET_ORDER_PAGE_QUERY = gql`
     }
   }
 `
+
+export const UPDATE_ORDER_STATUS = gql`
+  mutation UpdateOrderStatus($id: Int!, $status: OrderStatus!) {
+    updateOrderStatus(id: $id, status: $status) {
+      id
+      status
+    }
+  }
+`;
 
 export const UPDATE_ORDER_MUTATION = gql`
   mutation UpdateOrder($id: ID!, $input: UpdateOrderInput!) {

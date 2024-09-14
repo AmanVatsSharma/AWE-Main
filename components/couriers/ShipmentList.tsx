@@ -14,7 +14,7 @@ interface Shipment {
 interface ShipmentListProps {
     shipments: Shipment[]
     loading: boolean
-    error: any
+    error?: any
     onSelectShipment: (id: string) => void
 }
 

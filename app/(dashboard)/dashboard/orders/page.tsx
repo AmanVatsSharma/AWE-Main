@@ -51,6 +51,7 @@ export default function AdvancedAllOrders() {
   const [activeTab, setActiveTab] = useState("list")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
+  
   const filteredOrders = useMemo(() => {
     return orders.filter(order => 
       (order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||

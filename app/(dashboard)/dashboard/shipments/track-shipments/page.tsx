@@ -13,7 +13,7 @@ import DeliveryPreferences from '@/components/couriers/DeliveryPreferences'
 import TrackingInfo from '@/components/couriers/TrackingInfo'
 import TrackingMap from '@/components/couriers/TrackingMap'
 
-export default function ShipmentTracking() {
+const ShipmentTracking = () => {
     const [trackingNumber, setTrackingNumber] = useState('')
     const [selectedTab, setSelectedTab] = useState(0)
 
@@ -184,3 +184,4 @@ export default function ShipmentTracking() {
         </div>
     )
 }
+export default ShipmentTracking
